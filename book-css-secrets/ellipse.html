@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+      p {
+        width: 16em;
+        height: 10em;
+        background: #fb3;
+        border-radius: 50%;
+      }
+
+      div {
+        display: inline-block;
+        width: 16em;
+        height: 10em;
+        margin: 1em;
+        background: #fb3;
+        border-radius: 50% / 100% 100% 0 0;
+      }
+
+      div:nth-of-type(2) {
+        border-radius: 50% / 0 0 100% 100%;
+      }
+
+      div:nth-of-type(3) {
+        border-radius: 100% 0 0 100% / 50%;
+      }
+
+      div:nth-of-type(4) {
+        border-radius: 0 100% 100% 0 / 50%;
+      }
+
+      section {
+        display: inline-block;
+        width: 16em;
+        height: 10em;
+        margin: 1em;
+        background: #fb3;
+        border-radius: 100% 0 0 0;
+      }
+
+      section:nth-of-type(2) {
+        border-radius: 0 100% 0 0;
+      }
+
+      section:nth-of-type(3) {
+        border-radius: 0 0 100% 0;
+      }
+
+      section:nth-of-type(4) {
+        border-radius: 0 0 0 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <p></p>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <section></section>
+    <section></section>
+    <section></section>
+    <section></section>
+    <script>
+    </script>
+  </body>
+
+</html>

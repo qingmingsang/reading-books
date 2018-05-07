@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+
+      @keyframes foo {
+        from {
+          background: red
+        }
+        to {
+          background: yellowgreen
+        }
+      }
+
+      div {
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+
+        animation: foo 1s both linear;
+        animation-play-state: paused;
+      }
+
+      div:nth-of-type(2) {
+        animation-delay: -.2s;
+      }
+
+      div:nth-of-type(3) {
+        animation-delay: -.4s;
+      }
+
+      div:nth-of-type(4) {
+        animation-delay: -.6s;
+      }
+
+      div:nth-of-type(5) {
+        animation-delay: -.8s;
+      }
+
+      div:nth-of-type(6) {
+        animation-delay: -1s;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <script>
+    </script>
+  </body>
+
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: #655;
+        background-image: radial-gradient(tan 20%, transparent 0),
+        radial-gradient(tan 20%, transparent 0);
+        background-size: 30px 30px;
+        background-position: 0 0,
+        15px 15px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div></div>
+    <script>
+      var root = document.documentElement;//<html>
+
+      //检测某属性是否支持
+      if ('textShadow' in root.style) {
+        root.classList.add('textshadow');
+      } else {
+        root.classList.add('no-textshadow');
+      }
+
+      function testProperty(property) {
+        var root = document.documentElement;
+        if (property in root.style) {
+          root.classList.add(property.toLowerCase());
+          return true;
+        }
+        root.classList.add('no-' + property.toLowerCase());
+        return false;
+      }
+
+      //检测某属性值是否支持
+      var dummy = document.createElement('p');
+      dummy.style.backgroundImage = 'linear-gradient(red,tan)';
+
+      if (dummy.style.backgroundImage) {
+        root.classList.add('lineargradients');
+      } else {
+        root.classList.add('no-lineargradients');
+      }
+
+      function testValue(id, value, property) {
+        var dummy = document.createElement('p');
+        dummy.style[property] = value;
+        if (dummy.style[property]) {
+          root.classList.add(id);
+          return true;
+        }
+        root.classList.add('no-' + id);
+        return false;
+      }
+    </script>
+  </body>
+
+</html>

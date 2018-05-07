@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+      .pie {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: yellowgreen;
+        background-image: linear-gradient(to right, transparent 50%, currentColor 0);
+        color: #655;
+      }
+
+      .pie::before {
+        content: '';
+        display: block;
+        margin-left: 50%;
+        height: 100%;
+        border-radius: 0 100% 100% 0 / 50%;
+        background-color: inherit;
+        transform-origin: left;
+        animation: spin 3s linear infinite, bg 6s step-end infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(.5turn);
+        }
+      }
+
+      @keyframes bg {
+        50% {
+          background: currentColor;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="pie"></div>
+    <script>
+    </script>
+  </body>
+
+</html>
