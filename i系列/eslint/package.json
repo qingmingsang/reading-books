@@ -1,0 +1,19 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prect": "node pre-commit.js",
+    "start": "node ./sh/create-hooks"
+  },
+  "keywords": [],
+  "author": "qm",
+  "license": "MIT",
+  "dependencies": {
+    "babel-eslint": "^8.0.3",
+    "eslint": "^4.13.0",
+    "eslint-plugin-html": "^4.0.1",
+    "eslint-plugin-react": "^7.5.1"
+  }
+}
