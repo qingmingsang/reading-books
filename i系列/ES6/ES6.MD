@@ -248,57 +248,200 @@ s.trimEnd() // "  abc"
 ```
 
 # 正则
+
+开始支持这种写法
+原有正则对象的修饰符是ig，它会被第二个参数i覆盖。
+```
+new RegExp(/abc/ig, 'i').flags
+// "i"
+```
+
+##  后行断言
 ES2018(ES9)引入了后行断言
-
-
-# 对象
-
-全部冻结
 ```
-var constantize = (obj) => {
-  Object.freeze(obj);
-  Object.keys(obj).forEach( (key, i) => {
-    if ( typeof obj[key] === 'object' ) {
-      constantize( obj[key] );
-    }
-  });
-};
+const RE_DOLLAR_PREFIX = /(?<=\$)foo/g;
+'$foo %foo foo'.replace(RE_DOLLAR_PREFIX, 'bar');
+// '$bar %foo foo'
+```
+“后行断言”的反斜杠引用，也与通常的顺序相反，必须放在对应的那个括号之前。
+```
+/(?<=(o)d\1)r/.exec('hodor')  // null
+/(?<=\1d(o))r/.exec('hodor')  // ["r", "o"]
 ```
 
-freeze
+
+
+## 新增u修饰符
 ```
-const keyCode = Object.freeze({
-  LEFT: 37,
-  UP: 38,
-  RIGHT: 39,
-  DOWN: 40
+//可以写出一个正确返回字符串长度的函数。
+
+function codePointLength(text) {
+  var result = text.match(/[\s\S]/gu);
+  return result ? result.length : 0;
+}
+
+var s = '𠮷𠮷';
+
+s.length // 4
+codePointLength(s) // 2
+```
+
+## 新增y修饰符
+y修饰符要求匹配必须头部匹配
+实际上，y修饰符号隐含了头部匹配的标志`^`。
+```
+var s = 'aaa_aa_a';
+var r1 = /a+/g;
+var r2 = /a+/y;
+
+r1.exec(s) // ["aaa"]
+r2.exec(s) // ["aaa"]
+
+r1.exec(s) // ["aa"]
+r2.exec(s) // null
+
+var s = 'aaa_aa_a';
+var r = /a+_/y;
+
+r.exec(s) // ["aaa_"]
+r.exec(s) // ["aa_"]
+```
+
+y修饰符的一个应用，是从字符串提取 token（词元），y修饰符确保了匹配之间不会有漏掉的字符。
+```
+//如果字符串里面没有非法字符，y修饰符与g修饰符的提取结果是一样的。但是，一旦出现非法字符，两者的行为就不一样了。
+
+const TOKEN_Y = /\s*(\+|[0-9]+)\s*/y;
+const TOKEN_G  = /\s*(\+|[0-9]+)\s*/g;
+
+tokenize(TOKEN_Y, '3 + 4')
+// [ '3', '+', '4' ]
+tokenize(TOKEN_G, '3 + 4')
+// [ '3', '+', '4' ]
+
+tokenize(TOKEN_Y, '3x + 4')
+// [ '3' ]
+tokenize(TOKEN_G, '3x + 4')
+// [ '3', '+', '4' ]
+
+function tokenize(TOKEN_REGEX, str) {
+  let result = [];
+  let match;
+  while (match = TOKEN_REGEX.exec(str)) {
+    result.push(match[1]);
+  }
+  return result;
+}
+```
+
+## 新增s修饰符
+ES2018
+
+“行终止符”:
+- U+000A 换行符（`\n`）
+- U+000D 回车符（`\r`）
+- U+2028 行分隔符（line separator）
+- U+2029 段分隔符（paragraph separator）
+
+s主要是为了解决`.`不匹配`\n`的问题
+```
+/foo.bar/.test('foo\nbar')
+// false
+
+/foo[^]bar/.test('foo\nbar')
+// true
+
+/foo.bar/s.test('foo\nbar') // true
+```
+
+## 具名组匹配（Named Capture Groups）
+ES2018 引入了具名组匹配（Named Capture Groups），允许为每一个组匹配指定一个名字，既便于阅读代码，又便于引用。
+```
+const RE_DATE = /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/;
+
+const matchObj = RE_DATE.exec('1999-12-31');
+const year = matchObj.groups.year; // 1999
+const month = matchObj.groups.month; // 12
+const day = matchObj.groups.day; // 31
+```
+上面代码中，“具名组匹配”在圆括号内部，模式的头部添加“问号 + 尖括号 + 组名”（`?<year>`），然后就可以在exec方法返回结果的groups属性上引用该组名。同时，数字序号（`matchObj[1]`）依然有效。
+
+```
+let {groups: {one, two}} = /^(?<one>.*):(?<two>.*)$/u.exec('foo:bar');
+one  // foo
+two  // bar
+
+let re = /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/u;
+
+'2015-01-02'.replace(re, '$<day>/$<month>/$<year>')
+// '02/01/2015'
+
+'2015-01-02'.replace(re, (
+   matched, // 整个匹配结果 2015-01-02
+   capture1, // 第一个组匹配 2015
+   capture2, // 第二个组匹配 01
+   capture3, // 第三个组匹配 02
+   position, // 匹配开始的位置 0
+   S, // 原字符串 2015-01-02
+   groups // 具名组构成的一个对象 {year, month, day}
+ ) => {
+ let {day, month, year} = groups;
+ return `${day}/${month}/${year}`;
 });
 ```
 
+# 数值
 
+`Number.MAX_SAFE_INTEGER`   `Number.MIN_SAFE_INTEGER`
+```
+Number.MAX_SAFE_INTEGER === Math.pow(2, 53) - 1
+// true
+Number.MAX_SAFE_INTEGER === 9007199254740991
+// true
 
+Number.MIN_SAFE_INTEGER === -Number.MAX_SAFE_INTEGER
+// true
+Number.MIN_SAFE_INTEGER === -9007199254740991
+// true
+```
+`Number.isSafeInteger()`则是用来判断一个整数是否落在这个范围之内。
 
-# Math
+```
+Number.isSafeInteger = function (n) {
+  return (typeof n === 'number' &&
+    Math.round(n) === n &&
+    Number.MIN_SAFE_INTEGER <= n &&
+    n <= Number.MAX_SAFE_INTEGER);
+}
+```
+
+验证两个运算数和运算结果。
+```
+function trusty (left, right, result) {
+  if (
+    Number.isSafeInteger(left) &&
+    Number.isSafeInteger(right) &&
+    Number.isSafeInteger(result)
+  ) {
+    return result;
+  }
+  throw new RangeError('Operation cannot be trusted!');
+}
+
+trusty(9007199254740993, 990, 9007199254740993 - 990)
+// RangeError: Operation cannot be trusted!
+
+trusty(1, 2, 3)
+// 3
+```
+
+`Math.trunc()`
+Math.trunc方法用于去除一个数的小数部分，返回整数部分。
+
 Math.log10(),Math.log2() 
 
-Math.sign()
+`Math.sign()`
 Math.sign方法用来判断一个数到底是正数、负数、还是零。对于非数值，会先将其转换为数值。
-```
-Math.sign(-5) // -1
-Math.sign(5) // +1
-Math.sign(0) // +0
-Math.sign(-0) // -0
-Math.sign(NaN) // NaN
-
-Math.sign('')  // 0
-Math.sign(true)  // +1
-Math.sign(false)  // 0
-Math.sign(null)  // 0
-Math.sign('9')  // +1
-Math.sign('foo')  // NaN
-Math.sign()  // NaN
-Math.sign(undefined)  // NaN
-```
 
 Math.sign 的 pollyfill
 ```
@@ -311,8 +454,92 @@ Math.sign = Math.sign || function(x) {
 };
 ```
 
-# Function
-设置某参数不能省略
+`Math.cbrt()`
+Math.cbrt方法用于计算一个数的立方根。
+```
+Math.cbrt = Math.cbrt || function(x) {
+  var y = Math.pow(Math.abs(x), 1/3);
+  return x < 0 ? -y : y;
+};
+```
+
+## 指数运算符
+ES2016 新增了一个指数运算符（`**`）。
+
+这个运算符的一个特点是右结合，而不是常见的左结合。多个指数运算符连用时，是从最右边开始计算的。
+```
+// 相当于 2 ** (3 ** 2)
+2 ** 3 ** 2
+// 512
+```
+
+```
+let a = 1.5;
+a **= 2;
+// 等同于 a = a * a;
+
+let b = 4;
+b **= 3;
+// 等同于 b = b * b * b;
+```
+
+V8 引擎的指数运算符与`Math.pow`的实现不相同，对于特别大的运算结果，两者会有细微的差异。
+```
+Math.pow(99, 99)
+// 3.697296376497263e+197
+
+99 ** 99
+// 3.697296376497268e+197
+```
+
+
+
+# 函数
+## 参数默认值
+```
+function fetch(url, { body = '', method = 'GET', headers = {} }) {
+  console.log(method);
+}
+
+fetch('http://example.com', {})
+// "GET"
+
+fetch('http://example.com')
+// 报错
+```
+双重默认值
+```
+function fetch(url, { body = '', method = 'GET', headers = {} } = {}) {
+  console.log(method);
+}
+
+fetch('http://example.com')
+// "GET"
+```
+
+```
+// 例一
+function f(x = 1, y) {
+  return [x, y];
+}
+
+f() // [1, undefined]
+f(2) // [2, undefined])
+f(, 1) // 报错
+f(undefined, 1) // [1, 1]
+
+// 例二
+function f(x, y = 5, z) {
+  return [x, y, z];
+}
+
+f() // [undefined, 5, undefined]
+f(1) // [1, 5, undefined]
+f(1, ,2) // 报错
+f(1, undefined, 2) // [1, 5, 2]
+```
+
+利用参数默认值，可以指定某一个参数不得省略，如果省略就抛出一个错误。
 ```
 function throwIfMissing() {
   throw new Error('Missing parameter');
@@ -321,10 +548,106 @@ function throwIfMissing() {
 function foo(mustBeProvided = throwIfMissing()) {
   return mustBeProvided;
 }
+
+foo()
+// Error: Missing parameter
+```
+
+可以将参数默认值设为undefined，表明这个参数是可以省略的。
+```
+function foo(optional = undefined) { ··· }
+```
+
+## rest参数
+```
+// arguments变量的写法
+function sortNumbers() {
+  return Array.prototype.slice.call(arguments).sort();
+}
+
+// rest参数的写法
+const sortNumbers = (...numbers) => numbers.sort();
+```
+
+## 箭头函数
+箭头函数有几个使用注意点。
+- 函数体内的this对象，就是定义时所在的对象，而不是使用时所在的对象。
+- 不可以当作构造函数，也就是说，不可以使用new命令，否则会抛出一个错误。
+- 不可以使用arguments对象，该对象在函数体内不存在。如果要用，可以用 rest 参数代替。
+- 不可以使用yield命令，因此箭头函数不能用作 Generator 函数。
+
+如果箭头函数只有一行语句，且不需要返回值，可以采用下面的写法，就不用写大括号了。
+```
+let fn = () => void doesNotReturn();
+```
+
+箭头函数可以让this指向固定化，这种特性很有利于封装回调函数。
+```
+var handler = {
+  id: '123456',
+
+  init: function() {
+    document.addEventListener('click',
+      event => this.doSomething(event.type), false);
+  },
+
+  doSomething: function(type) {
+    console.log('Handling ' + type  + ' for ' + this.id);
+  }
+};
+```
+
+```
+// ES6
+function foo() {
+  setTimeout(() => {
+    console.log('id:', this.id);
+  }, 100);
+}
+
+// ES5
+function foo() {
+  var _this = this;
+
+  setTimeout(function () {
+    console.log('id:', _this.id);
+  }, 100);
+}
+```
+
+部署管道机制（pipeline）,即前一个函数的输出是后一个函数的输入。
+```
+    // const pipeline = (...funcs) =>
+    // val => funcs.reduce((a, b) => b(a), val);
+    const pipeline = (...funcs) => {
+      console.log(funcs)//funcs是传入的2个函数
+      return (val) => {
+        console.log('a1', val)//val是传入实例参数5
+        return funcs.reduce((a, b) => {
+          return b(a);//迭代执行
+        }, val);
+      }
+    }
+    const plus1 = a => a + 1;
+    const mult2 = a => a * 2;
+    const addThenMult = pipeline(plus1, mult2);
+
+    console.log(addThenMult(5))//12
+```
+
+可以很方便地改写 λ 演算。
+```
+// λ演算的写法
+fix = λf.(λx.f(λv.x(x)(v)))(λx.f(λv.x(x)(v)))
+
+// ES6的写法
+var fix = f => (x => f(v => x(x)(v)))
+               (x => f(v => x(x)(v)));
 ```
 
 
-# 尾调用（Tail Call）
+## 尾调用（Tail Call）
+尾调用（Tail Call）是函数式编程的一个重要概念，就是指某个函数的最后一步是调用另一个函数。
 ```
 function f(x){
   return g(x);
@@ -350,7 +673,54 @@ function f(x){
 }
 ```
 
+## 尾调用优化（Tail call optimization）
+尾调用之所以与其他调用不同，就在于它的特殊的调用位置。
+
+函数调用会在内存形成一个“调用记录”，又称“调用帧”（call frame），保存调用位置和内部变量等信息。如果在函数A的内部调用函数B，那么在A的调用帧上方，还会形成一个B的调用帧。等到B运行结束，将结果返回到A，B的调用帧才会消失。如果函数B内部还调用函数C，那就还有一个C的调用帧，以此类推。所有的调用帧，就形成一个“调用栈”（call stack）。
+
+尾调用由于是函数的最后一步操作，所以不需要保留外层函数的调用帧，因为调用位置、内部变量等信息都不会再用到了，只要直接用内层函数的调用帧，取代外层函数的调用帧就可以了。
+
+```
+function f() {
+  let m = 1;
+  let n = 2;
+  return g(m + n);
+}
+f();
+
+// 等同于
+function f() {
+  return g(3);
+}
+f();
+
+// 等同于
+g(3);
+```
+
+尾调用优化”即只保留内层函数的调用帧。如果所有函数都是尾调用，那么完全可以做到每次执行时，调用帧只有一项，这将大大节省内存。这就是“尾调用优化”的意义。
+注意，只有不再用到外层函数的内部变量，内层函数的调用帧才会取代外层函数的调用帧，否则就无法进行“尾调用优化”。
+```
+function addOne(a){
+  var one = 1;
+  function inner(b){
+    return b + one;
+  }
+  return inner(a);
+}
+```
+上面的函数不会进行尾调用优化，因为内层函数inner用到了外层函数addOne的内部变量one。
+
+注意，目前只有 Safari 浏览器支持尾调用优化，Chrome 和 Firefox 都不支持。
+
+
+
+
+
 # 尾递归
+函数调用自身，称为递归。如果尾调用自身，就称为尾递归。
+
+递归非常耗费内存，因为需要同时保存成千上百个调用帧，很容易发生“栈溢出”错误（stack overflow）。但对于尾递归来说，由于只存在一个调用帧，所以永远不会发生“栈溢出”错误。
 
 这是一个阶乘函数，计算n的阶乘.
 `5*4*3*2*1`
@@ -368,6 +738,35 @@ factorial(5) // 120
 ```
 function factorial(n, total=1) {
   'use strict'
+  if (n === 1) return total;
+  return factorial(n - 1, n * total);
+}
+
+factorial(5) // 120
+```
+
+函数式编程有一个概念，叫做柯里化（currying），意思是将多参数的函数转换成单参数的形式。这里也可以使用柯里化。
+```
+function currying(fn, n) {
+  return function (m) {
+    return fn.call(this, m, n);
+  };
+}
+
+function tailFactorial(n, total) {
+  if (n === 1) return total;
+  return tailFactorial(n - 1, n * total);
+}
+
+const factorial = currying(tailFactorial, 1);
+
+factorial(5) // 120
+```
+上面代码通过柯里化，将尾递归函数tailFactorial变为只接受一个参数的factorial。
+
+第二种方法就简单多了，就是采用 ES6 的函数默认值。
+```
+function factorial(n, total = 1) {
   if (n === 1) return total;
   return factorial(n - 1, n * total);
 }
@@ -407,6 +806,10 @@ Fibonacci2(10000) // Infinity
 递归本质上是一种循环操作。纯粹的函数式编程语言没有循环操作命令，所有的循环都用递归实现，这就是为什么尾递归对这些语言极其重要。对于其他支持“尾调用优化”的语言（比如 Lua，ES6），只需要知道循环可以用递归代替，而一旦使用递归，就最好使用尾递归。
 
 ES6 的尾调用优化只在严格模式下开启，正常模式是无效的。`'use strict'`
+这是因为在正常模式下，函数内部有两个变量，可以跟踪函数的调用栈。
+- `func.arguments`：返回调用时函数的参数。
+- `func.caller`：返回调用当前函数的那个函数。
+
 
 如果在非ES6环境进行尾调用优化,
 有2种方式
@@ -426,6 +829,7 @@ sum(1, 100000)
 ```
 
 第一种
+蹦床函数（trampoline）可以将递归执行转为循环执行。
 ```
 //蹦床函数
 function trampoline(f) {
@@ -448,6 +852,7 @@ trampoline(sum(1, 100000))
 ```
 
 第二种(推荐)
+蹦床函数并不是真正的尾递归优化，下面的实现才是。
 ```
 function tco(f) {
   var value;
@@ -479,6 +884,44 @@ var sum = tco(function(x, y) {
 sum(1, 100000)
 // 100001
 ```
+默认情况下，`active`这个变量是不激活的。一旦进入尾递归优化的过程，这个变量就激活了。然后，每一轮递归sum返回的都是undefined，所以就避免了递归执行；而accumulated数组存放每一轮sum执行的参数，总是有值的，这就保证了accumulator函数内部的while循环总是会执行。这样就很巧妙地将“递归”改成了“循环”，而后一轮的参数会取代前一轮的参数，保证了调用栈只有一层。
+
+ES2019允许catch语句省略参数。
+```
+try {
+  // ...
+} catch {
+  // ...
+}
+```
+
+# 数组
+
+
+# 对象
+
+全部冻结
+```
+var constantize = (obj) => {
+  Object.freeze(obj);
+  Object.keys(obj).forEach( (key, i) => {
+    if ( typeof obj[key] === 'object' ) {
+      constantize( obj[key] );
+    }
+  });
+};
+```
+
+freeze
+```
+const keyCode = Object.freeze({
+  LEFT: 37,
+  UP: 38,
+  RIGHT: 39,
+  DOWN: 40
+});
+```
+
 
 
 # Class
