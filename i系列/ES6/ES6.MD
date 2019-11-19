@@ -1833,6 +1833,172 @@ proxy.foo
 ## set()
 set方法用来拦截某个属性的赋值操作，可以接受四个参数，依次为目标对象、属性名、属性值和 Proxy 实例本身，其中最后一个参数可选。
 
+假定Person对象有一个age属性，该属性应该是一个不大于 200 的整数，那么可以使用Proxy保证age的属性值符合要求。
+```
+let validator = {
+  set: function(obj, prop, value) {
+    if (prop === 'age') {
+      if (!Number.isInteger(value)) {
+        throw new TypeError('The age is not an integer');
+      }
+      if (value > 200) {
+        throw new RangeError('The age seems invalid');
+      }
+    }
+
+    // 对于满足条件的 age 属性以及其他属性，直接保存
+    obj[prop] = value;
+  }
+};
+
+let person = new Proxy({}, validator);
+
+person.age = 100;
+
+person.age // 100
+person.age = 'young' // 报错
+person.age = 300 // 报错
+```
+
+结合get和set方法，就可以做到防止这些内部属性被外部读写。
+```
+const handler = {
+  get (target, key) {
+    invariant(key, 'get');
+    return target[key];
+  },
+  set (target, key, value) {
+    invariant(key, 'set');
+    target[key] = value;
+    return true;
+  }
+};
+function invariant (key, action) {
+  if (key[0] === '_') {
+    throw new Error(`Invalid attempt to ${action} private "${key}" property`);
+  }
+}
+const target = {};
+const proxy = new Proxy(target, handler);
+proxy._prop
+// Error: Invalid attempt to get private "_prop" property
+proxy._prop = 'c'
+// Error: Invalid attempt to set private "_prop" property
+```
+
+如果目标对象自身的某个属性，不可写且不可配置，那么set方法将不起作用。
+```
+const obj = {};
+Object.defineProperty(obj, 'foo', {
+  value: 'bar',
+  writable: false,
+});
+
+const handler = {
+  set: function(obj, prop, value, receiver) {
+    obj[prop] = 'baz';
+  }
+};
+
+const proxy = new Proxy(obj, handler);
+proxy.foo = 'baz';
+proxy.foo // "bar"
+```
+
+## apply()
+apply方法拦截函数的调用、call和apply操作。
+
+apply方法可以接受三个参数，分别是目标对象、目标对象的上下文对象（this）和目标对象的参数数组。
+```
+var handler = {
+  apply (target, ctx, args) {
+    return Reflect.apply(...arguments);
+  }
+};
+```
+
+变量p是 Proxy 的实例，当它作为函数调用时（p()），就会被apply方法拦截，返回一个字符串。
+```
+var target = function () { return 'I am the target'; };
+var handler = {
+  apply: function () {
+    return 'I am the proxy';
+  }
+};
+
+var p = new Proxy(target, handler);
+
+p()// "I am the proxy"
+```
+
+每当执行proxy函数（直接调用或call和apply调用），就会被apply方法拦截。
+直接调用Reflect.apply方法，也会被拦截。
+```
+var twice = {
+  apply (target, ctx, args) {
+    return Reflect.apply(...arguments) * 2;
+  }
+};
+function sum (left, right) {
+  return left + right;
+};
+var proxy = new Proxy(sum, twice);
+proxy(1, 2) // 6
+proxy.call(null, 5, 6) // 22
+proxy.apply(null, [7, 8]) // 30
+```
+
+## has()
+has方法用来拦截HasProperty操作，即判断对象是否具有某个属性时，这个方法会生效。典型的操作就是in运算符。
+
+has方法可以接受两个参数，分别是目标对象、需查询的属性名。
+
+## construct()
+construct方法用于拦截new命令。
+
+## deleteProperty()
+deleteProperty方法用于拦截delete操作，如果这个方法抛出错误或者返回false，当前属性就无法被delete命令删除。
+
+## defineProperty()
+defineProperty方法拦截了Object.defineProperty操作。
+
+## getOwnPropertyDescriptor()
+getOwnPropertyDescriptor方法拦截Object.getOwnPropertyDescriptor()，返回一个属性描述对象或者undefined。
+
+## getPrototypeOf()
+getPrototypeOf方法主要用来拦截获取对象原型。
+
+## isExtensible()
+isExtensible方法拦截Object.isExtensible操作。
+
+## ownKeys()
+ownKeys方法用来拦截对象自身属性的读取操作。
+
+## this 问题
+虽然 Proxy 可以代理针对目标对象的访问，但它不是目标对象的透明代理，即不做任何拦截的情况下，也无法保证与目标对象的行为一致。主要原因就是在 Proxy 代理的情况下，目标对象内部的this关键字会指向 Proxy 代理。
+
+## Proxy 适用写 Web 服务的客户端
+Proxy 对象可以拦截目标对象的任意属性，这使得它很合适用来写 Web 服务的客户端。
+
+新建了一个 Web 服务的接口，这个接口返回各种数据。Proxy 可以拦截这个对象的任意属性，所以不用为每一种数据写一个适配方法，只要写一个 Proxy 拦截就可以了。
+```
+const service = createWebService('http://example.com/data');
+
+service.employees().then(json => {
+  const employees = JSON.parse(json);
+  // ···
+});
+
+function createWebService(baseUrl) {
+  return new Proxy({}, {
+    get(target, propKey, receiver) {
+      return () => httpGet(baseUrl + '/' + propKey);
+    }
+  });
+}
+```
+
+
 # Class
 类的数据类型就是函数，类本身就指向构造函数。
 ```
