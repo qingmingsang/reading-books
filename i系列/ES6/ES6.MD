@@ -2739,6 +2739,145 @@ var clock = function* () {
 上面的 Generator 实现与 ES5 实现对比，可以看到少了用来保存状态的外部变量ticking，这样就更简洁，更安全（状态不会被非法篡改）、更符合函数式编程的思想，在写法上也更优雅。Generator 之所以可以不用外部变量保存状态，是因为它本身就包含了一个状态信息，即目前是否处于暂停态。
 
 
+## Generator 与协程
+协程（coroutine）是一种程序运行的方式，可以理解成“协作的线程”或“协作的函数”。协程既可以用单线程实现，也可以用多线程实现。
+
+协程有点像函数，又有点像线程。它的运行流程大致如下。
+- 第一步，协程A开始执行。
+- 第二步，协程A执行到一半，进入暂停，执行权转移到协程B。
+- 第三步，（一段时间后）协程B交还执行权。
+- 第四步，协程A恢复执行。
+
+### （1）协程与子例程的差异
+传统的“子例程”（subroutine）采用堆栈式“后进先出”的执行方式，只有当调用的子函数完全执行完毕，才会结束执行父函数。协程与其不同，多个线程（单线程情况下，即多个函数）可以并行执行，但是只有一个线程（或函数）处于正在运行的状态，其他线程（或函数）都处于暂停态（suspended），线程（或函数）之间可以交换执行权。也就是说，一个线程（或函数）执行到一半，可以暂停执行，将执行权交给另一个线程（或函数），等到稍后收回执行权的时候，再恢复执行。这种可以并行执行、交换执行权的线程（或函数），就称为协程。
+
+从实现上看，在内存中，子例程只使用一个栈（stack），而协程是同时存在多个栈，但只有一个栈是在运行状态，也就是说，协程是以多占用内存为代价，实现多任务的并行。
+###（2）协程与普通线程的差异
+不难看出，协程适合用于多任务运行的环境。在这个意义上，它与普通的线程很相似，都有自己的执行上下文、可以分享全局变量。它们的不同之处在于，同一时间可以有多个线程处于运行状态，但是运行的协程只能有一个，其他协程都处于暂停状态。此外，普通的线程是抢先式的，到底哪个线程优先得到资源，必须由运行环境决定，但是协程是合作式的，执行权由协程自己分配。
+
+由于 JavaScript 是单线程语言，只能保持一个调用栈。引入协程以后，每个任务可以保持自己的调用栈。这样做的最大好处，就是抛出错误的时候，可以找到原始的调用栈。不至于像异步操作的回调函数那样，一旦出错，原始的调用栈早就结束。
+
+Generator 函数是 ES6 对协程的实现，但属于不完全实现。Generator 函数被称为“半协程”（semi-coroutine），意思是只有 Generator 函数的调用者，才能将程序的执行权还给 Generator 函数。如果是完全执行的协程，任何函数都可以让暂停的协程继续执行。
+
+如果将 Generator 函数当作协程，完全可以将多个需要互相协作的任务写成 Generator 函数，它们之间使用yield表达式交换控制权。
+
+## Generator 与上下文
+JavaScript 代码运行时，会产生一个全局的上下文环境（context，又称运行环境），包含了当前所有的变量和对象。然后，执行函数（或块级代码）的时候，又会在当前上下文环境的上层，产生一个函数运行的上下文，变成当前（active）的上下文，由此形成一个上下文环境的堆栈（context stack）。
+
+这个堆栈是“后进先出”的数据结构，最后产生的上下文环境首先执行完成，退出堆栈，然后再执行完成它下层的上下文，直至所有代码执行完成，堆栈清空。
+
+Generator 函数不是这样，它执行产生的上下文环境，一旦遇到yield命令，就会暂时退出堆栈，但是并不消失，里面的所有变量和对象会冻结在当前状态。等到对它执行next命令时，这个上下文环境又会重新加入调用栈，冻结的变量和对象恢复执行。
+```
+function* gen() {
+  yield 1;
+  return 2;
+}
+
+let g = gen();
+
+console.log(
+  g.next().value,//1
+  g.next().value,//2
+);
+```
+上面代码中，第一次执行g.next()时，Generator 函数gen的上下文会加入堆栈，即开始运行gen内部的代码。等遇到yield 1时，gen上下文退出堆栈，内部状态冻结。第二次执行g.next()时，gen上下文重新加入堆栈，变成当前的上下文，重新恢复执行。
+
+## 协程的 Generator 函数实现
+Generator 函数是协程在 ES6 的实现，最大特点就是可以交出函数的执行权（即暂停执行）。
+
+整个 Generator 函数就是一个封装的异步任务，或者说是异步任务的容器。异步操作需要暂停的地方，都用yield语句注明。Generator 函数的执行方法如下。
+```
+function* gen(x) {
+  var y = yield x + 2;
+  return y;
+}
+
+var g = gen(1);
+g.next() // { value: 3, done: false }
+g.next() // { value: undefined, done: true }
+```
+上面代码中，调用 Generator 函数，会返回一个内部指针（即遍历器）g。这是 Generator 函数不同于普通函数的另一个地方，即执行它不会返回结果，返回的是指针对象。调用指针g的next方法，会移动内部指针（即执行异步任务的第一段），指向第一个遇到的yield语句，上例是执行到x + 2为止。
+
+换言之，next方法的作用是分阶段执行Generator函数。每次调用next方法，会返回一个对象，表示当前阶段的信息（value属性和done属性）。value属性是yield语句后面表达式的值，表示当前阶段的值；done属性是一个布尔值，表示 Generator 函数是否执行完毕，即是否还有下一个阶段。
+
+## Thunk
+编程语言刚刚起步，计算机学家还在研究，编译器怎么写比较好。一个争论的焦点是"求值策略"，即函数的参数到底应该何时求值。
+
+一种意见是"传值调用"（call by value），即在进入函数体之前，就计算x + 5的值（等于 6），再将这个值传入函数f。C 语言就采用这种策略。
+```
+f(x + 5)
+// 传值调用时，等同于
+f(6)
+```
+
+另一种意见是“传名调用”（call by name），即直接将表达式x + 5传入函数体，只在用到它的时候求值。Haskell 语言采用这种策略。
+```
+f(x + 5)
+// 传名调用时，等同于
+(x + 5) * 2
+```
+
+
+编译器的“传名调用”实现，往往是将参数放到一个临时函数之中，再将这个临时函数传入函数体。这个临时函数就叫做 Thunk 函数。
+```
+function f(m) {
+  return m * 2;
+}
+
+f(x + 5);
+
+// 等同于
+
+var thunk = function () {
+  return x + 5;
+};
+
+function f(thunk) {
+  return thunk() * 2;
+}
+```
+上面代码中，函数 f 的参数x + 5被一个函数替换了。凡是用到原参数的地方，对Thunk函数求值即可。
+这就是 Thunk 函数的定义，它是“传名调用”的一种实现策略，用来替换某个表达式。
+
+JavaScript 语言是传值调用，它的 Thunk 函数含义有所不同。在 JavaScript 语言中，Thunk 函数替换的不是表达式，而是多参数函数，将其替换成一个只接受回调函数作为参数的单参数函数。
+
+任何函数，只要参数有回调函数，就能写成 Thunk 函数的形式。下面是一个简单的 Thunk 函数转换器。
+```
+// ES5版本
+var Thunk = function(fn){
+  return function (){
+    var args = Array.prototype.slice.call(arguments);
+    return function (callback){
+      args.push(callback);
+      return fn.apply(this, args);
+    }
+  };
+};
+
+// ES6版本
+const Thunk = function(fn) {
+  return function (...args) {
+    return function (callback) {
+      return fn.call(this, ...args, callback);
+    }
+  };
+};
+```
+
+## Generator 函数的流程管理
+Thunk 函数以前确实没什么用，但是 ES6 有了 Generator 函数，Thunk 函数现在可以用于 Generator 函数的自动流程管理。
+```
+var fs = require('fs');
+var thunkify = require('thunkify');
+var readFileThunk = thunkify(fs.readFile);
+
+var gen = function* (){
+  var r1 = yield readFileThunk('/etc/fstab');
+  console.log(r1.toString());
+  var r2 = yield readFileThunk('/etc/shells');
+  console.log(r2.toString());
+};
+```
 
 
 # Class
