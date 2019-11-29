@@ -2916,7 +2916,164 @@ function next(ret) {
 }
 ```
 
+处理 Stream
+```
+const co = require('co');
+const fs = require('fs');
 
+const stream = fs.createReadStream('./les_miserables.txt');
+let valjeanCount = 0;
+
+co(function*() {
+  while(true) {
+    const res = yield Promise.race([
+      new Promise(resolve => stream.once('data', resolve)),
+      new Promise(resolve => stream.once('end', resolve)),
+      new Promise((resolve, reject) => stream.once('error', reject))
+    ]);
+    if (!res) {
+      break;
+    }
+    stream.removeAllListeners('data');
+    stream.removeAllListeners('end');
+    stream.removeAllListeners('error');
+    valjeanCount += (res.toString().match(/valjean/ig) || []).length;
+  }
+  console.log('count:', valjeanCount); // count: 1120
+});
+```
+
+# async
+async 函数是 Generator 函数的语法糖。
+
+async函数对 Generator 函数的改进，体现在以下四点。
+（1）内置执行器。
+Generator 函数的执行必须靠执行器，所以才有了co模块，而async函数自带执行器。也就是说，async函数的执行，与普通函数一模一样，只要一行。
+（2）更好的语义。
+async和await，比起星号和yield，语义更清楚了。async表示函数里有异步操作，await表示紧跟在后面的表达式需要等待结果。
+（3）更广的适用性。
+co模块约定，yield命令后面只能是 Thunk 函数或 Promise 对象，而async函数的await命令后面，可以是 Promise 对象和原始类型的值（数值、字符串和布尔值，但这时会自动转成立即 resolved 的 Promise 对象）。
+（4）返回值是 Promise。
+async函数的返回值是 Promise 对象，这比 Generator 函数的返回值是 Iterator 对象方便多了。你可以用then方法指定下一步的操作。
+
+```
+// 函数声明
+async function foo() {}
+
+// 函数表达式
+const foo = async function () {};
+
+// 对象的方法
+let obj = { async foo() {} };
+obj.foo().then(...)
+
+// Class 的方法
+class Storage {
+  constructor() {
+    this.cachePromise = caches.open('avatars');
+  }
+
+  async getAvatar(name) {
+    const cache = await this.cachePromise;
+    return cache.match(`/avatars/${name}.jpg`);
+  }
+}
+
+const storage = new Storage();
+storage.getAvatar('jake').then(…);
+
+// 箭头函数
+const foo = async () => {};
+```
+
+```
+async function getStockPriceByName(name) {
+  const symbol = await getStockSymbol(name);
+  const stockPrice = await getStockPrice(symbol);
+  return stockPrice;
+}
+
+getStockPriceByName('goog').then(function (result) {
+  console.log(result);
+});
+```
+
+## 返回 Promise 对象
+async函数内部return语句返回的值，会成为then方法回调函数的参数。
+```
+async function f() {
+  return 'hello world';
+}
+
+f().then(v => console.log(v))
+// "hello world"
+```
+
+async函数内部抛出错误，会导致返回的 Promise 对象变为reject状态。抛出的错误对象会被catch方法回调函数接收到。
+```
+async function f() {
+  throw new Error('出错了');
+}
+
+f().then(
+  v => console.log(v),
+  e => console.log(e)
+)
+// Error: 出错了
+```
+
+await命令后面是一个Sleep对象的实例。这个实例不是 Promise 对象，但是因为定义了then方法，await会将其视为Promise处理。
+```
+class Sleep {
+  constructor(timeout) {
+    this.timeout = timeout;
+  }
+  then(resolve, reject) {
+    const startTime = Date.now();
+    setTimeout(
+      () => resolve(Date.now() - startTime),
+      this.timeout
+    );
+  }
+}
+
+(async () => {
+  const sleepTime = await new Sleep(1000);
+  console.log(sleepTime);
+})();
+// 1000
+```
+
+## await
+任何一个await语句后面的 Promise 对象变为reject状态，那么整个async函数都会中断执行。
+
+有时，我们希望即使前一个异步操作失败，也不要中断后面的异步操作。这时可以将第一个await放在`try...catch`结构里面，这样不管这个异步操作是否成功，第二个await都会执行。
+```
+async function f() {
+  try {
+    await Promise.reject('出错了');
+  } catch(e) {
+  }
+  return await Promise.resolve('hello world');
+}
+
+f()
+.then(v => console.log(v))
+// hello world
+```
+另一种方法是await后面的 Promise 对象再跟一个catch方法，处理前面可能出现的错误。
+```
+async function f() {
+  await Promise.reject('出错了')
+    .catch(e => console.log(e));
+  return await Promise.resolve('hello world');
+}
+
+f()
+.then(v => console.log(v))
+// 出错了
+// hello world
+```
 
 # Class
 类的数据类型就是函数，类本身就指向构造函数。
