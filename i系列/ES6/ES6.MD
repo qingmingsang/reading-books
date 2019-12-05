@@ -3075,6 +3075,133 @@ f()
 // hello world
 ```
 
+### await使用注意点
+第一点，前面已经说过，await命令后面的Promise对象，运行结果可能是rejected，所以最好把await命令放在try...catch代码块中。
+```
+async function myFunction() {
+  try {
+    await somethingThatReturnsAPromise();
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// 另一种写法
+
+async function myFunction() {
+  await somethingThatReturnsAPromise()
+  .catch(function (err) {
+    console.log(err);
+  });
+}
+```
+
+第二点，多个await命令后面的异步操作，如果不存在继发关系，最好让它们同时触发。
+```
+let foo = await getFoo();
+let bar = await getBar();
+```
+上面代码中，getFoo和getBar是两个独立的异步操作（即互不依赖），被写成继发关系。这样比较耗时，因为只有getFoo完成以后，才会执行getBar，完全可以让它们同时触发。
+```
+// 写法一
+let [foo, bar] = await Promise.all([getFoo(), getBar()]);
+
+// 写法二
+let fooPromise = getFoo();
+let barPromise = getBar();
+let foo = await fooPromise;
+let bar = await barPromise;
+```
+上面两种写法，getFoo和getBar都是同时触发，这样就会缩短程序的执行时间。
+
+如果确实希望多个请求并发执行，可以使用Promise.all方法。当三个请求都会resolved时，下面两种写法效果相同。
+```
+async function dbFuc(db) {
+  let docs = [{}, {}, {}];
+  let promises = docs.map((doc) => db.post(doc));
+
+  let results = await Promise.all(promises);
+  console.log(results);
+}
+
+// 或者使用下面的写法
+
+async function dbFuc(db) {
+  let docs = [{}, {}, {}];
+  let promises = docs.map((doc) => db.post(doc));
+
+  let results = [];
+  for (let promise of promises) {
+    results.push(await promise);
+  }
+  console.log(results);
+}
+```
+
+第三点，await命令只能用在async函数之中，如果用在普通函数，就会报错。
+第四点，async 函数可以保留运行堆栈。
+
+## async 函数的实现原理
+async 函数的实现原理，就是将 Generator 函数和自动执行器，包装在一个函数里。
+```
+async function fn(args) {
+  // ...
+}
+
+// 等同于
+
+function fn(args) {
+  return spawn(function* () {
+    // ...
+  });
+}
+```
+所有的async函数都可以写成上面的第二种形式，其中的spawn函数就是自动执行器。
+
+下面给出spawn函数的实现，基本就是前文自动执行器的翻版。
+```
+function spawn(genF) {
+  return new Promise(function(resolve, reject) {
+    const gen = genF();
+    function step(nextF) {
+      let next;
+      try {
+        next = nextF();
+      } catch(e) {
+        return reject(e);
+      }
+      if(next.done) {
+        return resolve(next.value);
+      }
+      Promise.resolve(next.value).then(function(v) {
+        step(function() { return gen.next(v); });
+      }, function(e) {
+        step(function() { return gen.throw(e); });
+      });
+    }
+    step(function() { return gen.next(undefined); });
+  });
+}
+```
+
+并发发出远程请求。
+```
+async function logInOrder(urls) {
+  // 并发读取远程URL
+  const textPromises = urls.map(async url => {
+    const response = await fetch(url);
+    return response.text();
+  });
+
+  // 按次序输出
+  for (const textPromise of textPromises) {
+    console.log(await textPromise);
+  }
+}
+```
+上面代码中，虽然map方法的参数是async函数，但它是并发执行的，因为只有async函数内部是继发执行，外部不受影响。后面的for..of循环内部使用了await，因此实现了按顺序输出。
+
+
 # Class
 类的数据类型就是函数，类本身就指向构造函数。
 ```
@@ -3117,10 +3244,7 @@ Object.keys(Point.prototype)// ["toString"]
 Object.getOwnPropertyNames(Point.prototype)// ["constructor","toString"]
 ```
 
-## 严格模式
-类和模块的内部，默认就是严格模式，所以不需要使用use strict指定运行模式。
-
-## constructor
+## constructor 方法
 constructor方法是类的默认方法，通过new命令生成对象实例时，自动调用该方法。一个类必须有constructor方法，如果没有显式定义，一个空的constructor方法会被默认添加。
 
 constructor方法默认返回实例对象（即this），完全可以指定返回另外一个对象。
@@ -3136,6 +3260,7 @@ new Foo() instanceof Foo// false
 
 ## 类的实例对象
 实例的属性除非显式定义在其本身（即定义在this对象上），否则都是定义在原型上（即定义在class上）。
+
 x和y都是实例对象point自身的属性（因为定义在this变量上），所以hasOwnProperty方法返回true，而toString是原型对象的属性（因为定义在Point类上），所以hasOwnProperty方法返回false。这些都与 ES5 的行为保持一致。
 ```
 //定义类
@@ -3162,7 +3287,18 @@ point.hasOwnProperty('toString') // false
 point.__proto__.hasOwnProperty('toString') // true
 ```
 
+与 ES5 一样，类的所有实例共享一个原型对象。
+```
+var p1 = new Point(2,3);
+var p2 = new Point(3,2);
+
+p1.__proto__ === p2.__proto__
+//true
+```
+上面代码中，p1和p2都是Point的实例，它们的原型都是Point.prototype，所以`__proto__`属性是相等的。
+
 可以通过实例的`__proto__`属性或`getPrototypeOf`为“类”添加方法。
+`__proto__` 并不是语言本身的特性，这是各大厂商具体实现时添加的私有属性，虽然目前很多现代浏览器的 JS 引擎中都提供了这个私有属性，但依旧不建议在生产中使用该属性，避免对环境产生依赖。
 不推荐这种用法.
 ```
 class Point{}
@@ -3178,6 +3314,7 @@ p2.printName() // "Oops"
 var p3 = new Point(4,2);
 p3.printName() // "Oops"
 ```
+上面代码在p1的原型上添加了一个printName方法，由于p1的原型就是p2的原型，因此p2也可以调用这个方法。而且，此后新建的实例p3也可以调用这个方法。这意味着，使用实例的`__proto__`属性改写原型，必须相当谨慎，不推荐使用，因为这会改变“类”的原始定义，影响到所有实例。
 
 
 ## Class表达式
@@ -3196,51 +3333,31 @@ let person = new class {
 person.sayName(); // "张三"
 ```
 
-## 不存在变量提升
-类不存在变量提升（hoist），这一点与 ES5 完全不同。
-
-## this的指向
-类的方法内部如果含有this，它默认指向类的实例。但是，必须非常小心，一旦单独使用该方法，很可能报错。
+## 取值函数（getter）和存值函数（setter）
+与 ES5 一样，在“类”的内部可以使用get和set关键字，对某个属性设置存值函数和取值函数，拦截该属性的存取行为。
 ```
-class Logger {
-  printName(name = 'there') {
-    this.print(`Hello ${name}`);
+class MyClass {
+  constructor() {
+    // ...
   }
-  print(text) {
-    console.log(text);
+  get prop() {
+    return 'getter';
+  }
+  set prop(value) {
+    console.log('setter: '+value);
   }
 }
 
-const logger = new Logger();
-const { printName } = logger;
-printName(); // TypeError: Cannot read property 'print' of undefined
+let inst = new MyClass();
+
+inst.prop = 123;
+// setter: 123
+
+inst.prop
+// 'getter'
 ```
+上面代码中，prop属性有对应的存值函数和取值函数，因此赋值和读取行为都被自定义了。
 
-
-可以使用Proxy，获取方法的时候，自动绑定this。
-```
-function selfish (target) {
-  const cache = new WeakMap();
-  const handler = {
-    get (target, key) {
-      const value = Reflect.get(target, key);
-      if (typeof value !== 'function') {
-        return value;
-      }
-      if (!cache.has(value)) {
-        cache.set(value, value.bind(target));
-      }
-      return cache.get(value);
-    }
-  };
-  const proxy = new Proxy(target, handler);
-  return proxy;
-}
-
-const logger = selfish(new Logger());
-```
-
-## Class-的取值函数（getter）和存值函数（setter）
 存值函数和取值函数是设置在属性的 Descriptor 对象上的。
 ```
 class CustomHTMLElement {
@@ -3264,12 +3381,191 @@ var descriptor = Object.getOwnPropertyDescriptor(
 "get" in descriptor  // true
 "set" in descriptor  // true
 ```
+上面代码中，存值函数和取值函数是定义在html属性的描述对象上面，这与 ES5 完全一致。
+
+
+## 注意点
+### （1）严格模式
+类和模块的内部，默认就是严格模式，所以不需要使用use strict指定运行模式。
+### （2）不存在变量提升
+类不存在变量提升（hoist），这一点与 ES5 完全不同。
+### （3）name 属性
+由于本质上，ES6 的类只是 ES5 的构造函数的一层包装，所以函数的许多特性都被Class继承，包括name属性。
+### （4）Generator 方法
+如果某个方法之前加上星号（*），就表示该方法是一个 Generator 函数。
+### （5）this 的指向
+类的方法内部如果含有this，它默认指向类的实例。但是，必须非常小心，一旦单独使用该方法，很可能报错。
+```
+class Logger {
+  printName(name = 'there') {
+    this.print(`Hello ${name}`);
+  }
+  print(text) {
+    console.log(text);
+  }
+}
+
+const logger = new Logger();
+const { printName } = logger;
+printName(); // TypeError: Cannot read property 'print' of undefined
+```
+可以使用Proxy，获取方法的时候，自动绑定this。
+```
+function selfish (target) {
+  const cache = new WeakMap();
+  const handler = {
+    get (target, key) {
+      const value = Reflect.get(target, key);
+      if (typeof value !== 'function') {
+        return value;
+      }
+      if (!cache.has(value)) {
+        cache.set(value, value.bind(target));
+      }
+      return cache.get(value);
+    }
+  };
+  const proxy = new Proxy(target, handler);
+  return proxy;
+}
+
+const logger = selfish(new Logger());
+```
+
+
 
 ## Class的静态方法
+类相当于实例的原型，所有在类中定义的方法，都会被实例继承。如果在一个方法前，加上static关键字，就表示该方法不会被实例继承，而是直接通过类来调用，这就称为“静态方法”。
+
+注意，如果静态方法包含this关键字，这个this指的是类，而不是实例。
+所以在静态方法里不可以调用实例方法,只可以调用静态方法.
+```
+class Foo {
+  static bar() {
+    this.baz();
+  }
+  static baz() {
+    console.log('hello');
+  }
+  baz() {
+    console.log('world');
+  }
+}
+
+Foo.bar() // hello
+```
+
 静态方法不会被实例继承，而是直接通过类来调用。
 静态方法可以与非静态方法重名。
 父类的静态方法，可以被子类继承。
 静态方法也是可以从super对象上调用的。
+
+## 实例属性的新写法
+实例属性除了定义在constructor()方法里面的this上面，也可以定义在类的最顶层。
+```
+class IncreasingCounter {
+  _count = 0;
+  //constructor() {
+  //  this._count = 0;
+  //}
+  get value() {
+    console.log('Getting the current value!');
+    return this._count;
+  }
+  increment() {
+    this._count++;
+  }
+}
+```
+
+## 静态属性
+现在有一个提案提供了类的静态属性，写法是在实例属性的前面，加上static关键字。
+```
+class MyClass {
+  static myStaticProp = 42;
+
+  constructor() {
+    console.log(MyClass.myStaticProp); // 42
+  }
+}
+```
+
+## 私有方法和私有属性
+现有的解决方案
+私有方法和私有属性，是只能在类的内部访问的方法和属性，外部不能访问。这是常见需求，有利于代码的封装，但 ES6 不提供，只能通过变通方法模拟实现。
+
+一种做法是在命名上加以区别。
+```
+class Widget {
+
+  // 公有方法
+  foo (baz) {
+    this._bar(baz);
+  }
+
+  // 私有方法
+  _bar(baz) {
+    return this.snaf = baz;
+  }
+
+  // ...
+}
+```
+
+另一种方法就是索性将私有方法移出模块，因为模块内部的所有方法都是对外可见的。
+```
+class Widget {
+  foo (baz) {
+    bar.call(this, baz);
+  }
+
+  // ...
+}
+
+function bar(baz) {
+  return this.snaf = baz;
+}
+```
+
+还有一种方法是利用Symbol值的唯一性，将私有方法的名字命名为一个Symbol值。
+```
+const bar = Symbol('bar');
+const snaf = Symbol('snaf');
+
+export default class myClass{
+
+  // 公有方法
+  foo(baz) {
+    this[bar](baz);
+  }
+
+  // 私有方法
+  [bar](baz) {
+    return this[snaf] = baz;
+  }
+
+  // ...
+};
+```
+
+## 私有属性的提案
+目前，有一个提案，为class加了私有属性。方法是在属性名之前，使用`#`表示。
+```
+class Foo {
+  #a;
+  #b;
+  constructor(a, b) {
+    this.#a = a;
+    this.#b = b;
+  }
+  #sum() {
+    return #a + #b;
+  }
+  printSum() {
+    console.log(this.#sum());
+  }
+}
+```
 
 
 ## new.target属性
@@ -3309,7 +3605,7 @@ class Shape {
     }
   }
 }
-
+//Shape类不能被实例化，只能用于继承。
 class Rectangle extends Shape {
   constructor(length, width) {
     super();
@@ -3321,23 +3617,37 @@ var x = new Shape();  // 报错
 var y = new Rectangle(3, 4);  // 正确
 ```
 
+
 ## Class的继承
 子类必须在constructor方法中调用super方法，否则新建实例时会报错。
 这是因为子类自己的this对象，必须先通过父类的构造函数完成塑造，得到与父类同样的实例属性和方法，然后再对其进行加工，加上子类自己的实例属性和方法。如果不调用super方法，子类就得不到this对象。
 所以在子类的构造函数中，只有调用super之后，才可以使用this关键字.
 ```
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
 class ColorPoint extends Point {
   constructor(x, y, color) {
-    super(x, y); // 调用父类的constructor(x, y)
-    this.color = color;
+    this.color = color; // ReferenceError
+    super(x, y);// 调用父类的constructor(x, y)
+    this.color = color; // 正确
   }
   toString() {
     return this.color + ' ' + super.toString(); // 调用父类的toString()
   }
 }
+
+let cp = new ColorPoint(25, 8, 'green');
+
+cp instanceof ColorPoint // true
+cp instanceof Point // true
 ```
 
-ES5 的继承，实质是先创造子类的实例对象this，然后再将父类的方法添加到this上面（Parent.apply(this)）。ES6 的继承机制完全不同，实质是先创造父类的实例对象this（所以必须先调用super方法），然后再用子类的构造函数修改this。
+ES5 的继承，实质是先创造子类的实例对象this，然后再将父类的方法添加到this上面（`Parent.apply(this)`）。ES6 的继承机制完全不同，实质是先创造父类的实例对象this（所以必须先调用super方法），然后再用子类的构造函数修改this。
 
 如果子类没有定义constructor方法，这个方法会被默认添加，
 ```
@@ -3353,14 +3663,66 @@ class ColorPoint extends Point {
 
 ## Object.getPrototypeOf
 Object.getPrototypeOf方法可以用来从子类上获取父类。
+```
+Object.getPrototypeOf(ColorPoint) === Point // true
+```
+因此，可以使用这个方法判断，一个类是否继承了另一个类。
 
-## super
-super()只能用在子类的构造函数之中，用在其他地方就会报错。
-super作为对象时，在普通方法中，指向父类的原型对象；在静态方法中，指向父类。
+
+## super 关键字
+super这个关键字，既可以当作函数使用，也可以当作对象使用。在这两种情况下，它的用法完全不同。
+
+第一种情况，super作为函数调用时，代表父类的构造函数。ES6 要求，子类的构造函数必须执行一次super函数。
+```
+class A {}
+
+class B extends A {
+  constructor() {
+    super();
+  }
+}
+```
+上面代码中，子类B的构造函数之中的super()，代表调用父类的构造函数。这是必须的，否则 JavaScript 引擎会报错。
+
+注意，super虽然代表了父类A的构造函数，但是返回的是子类B的实例，即super内部的this指的是B的实例，因此`super()`在这里相当于`A.prototype.constructor.call(this)`。
+
+```
+class A {
+  constructor() {
+    console.log(new.target.name);
+  }
+}
+class B extends A {
+  constructor() {
+    super();
+  }
+}
+new A() // A
+new B() // B
+```
+上面代码中，new.target指向当前正在执行的函数。可以看到，在super()执行时，它指向的是子类B的构造函数，而不是父类A的构造函数。也就是说，super()内部的this指向的是B。
+
+作为函数时，super()只能用在子类的构造函数之中，用在其他地方就会报错。
+
+第二种情况，super作为对象时，在普通方法中，指向父类的原型对象；在静态方法中，指向父类。
+```
+class A {
+  p() {
+    return 2;
+  }
+}
+class B extends A {
+  constructor() {
+    super();
+    console.log(super.p()); // 2
+  }
+}
+let b = new B();
+```
+上面代码中，子类B当中的super.p()，就是将super当作一个对象使用。这时，super在普通方法之中，指向A.prototype，所以super.p()就相当于A.prototype.p()。
+
 由于super指向父类的原型对象，所以定义在父类实例上的方法或属性，是无法通过super调用的。
-但如果属性定义在父类的原型对象上，super就可以取到。
-
-super()在这里相当于`A.prototype.constructor.call(this)`。
+在子类普通方法中通过super调用父类的方法时，方法内部的this指向当前的子类实例。
 ```
 class A {
   constructor() {
@@ -3370,8 +3732,8 @@ class A {
     return 2;
   }
 }
-
 A.prototype.y = 'y';
+
 class B extends A {
   constructor() {
     super(); 
@@ -3392,7 +3754,10 @@ class B extends A {
 let b = new B();
 ```
 
-在子类普通方法中通过super调用父类的方法时，方法内部的this指向当前的子类实例。
+如果super作为对象，用在静态方法之中，这时super将指向父类，而不是父类的原型对象。
+另外，在子类的静态方法中通过super调用父类的方法时，方法内部的this指向当前的子类，而不是子类的实例。
+
+使用super的时候，必须显式指定是作为函数、还是作为对象使用，否则会报错。
 
 由于对象总是继承其他对象的，所以可以在任意一个对象中，使用super关键字。
 ```
@@ -3405,7 +3770,7 @@ obj.toString(); // MyObject: [object Object]
 ```
 
 
-## Class的 prototype 属性和__proto__属性
+## 类的 prototype 属性和__proto__属性
 大多数浏览器的 ES5 实现之中，每一个对象都有`__proto__`属性，指向对应的构造函数的prototype属性。
 Class 作为构造函数的语法糖，同时有prototype属性和`__proto__`属性，因此同时存在两条继承链。
 1. 子类的`__proto__`属性，表示构造函数的继承，总是指向父类。
@@ -3427,7 +3792,6 @@ Object.setPrototypeOf(B.prototype, A.prototype);
 // B 继承 A 的静态属性
 Object.setPrototypeOf(B, A);
 ```
-
 Object.setPrototypeOf方法的实现:
 ```
 Object.setPrototypeOf = function (obj, proto) {
@@ -3435,7 +3799,6 @@ Object.setPrototypeOf = function (obj, proto) {
   return obj;
 }
 ```
-
 因此，就得到了上面的结果。
 ```
 Object.setPrototypeOf(B, A);
@@ -3448,6 +3811,13 @@ Object.setPrototypeOf(B.prototype, A.prototype);
 B.prototype.__proto__ = A.prototype;
 // 等同于
 Object.create(A.prototype);//???
+```
+
+这两条继承链，可以这样理解：作为一个对象，子类（B）的原型（__proto__属性）是父类（A）；作为一个构造函数，子类（B）的原型对象（prototype属性）是父类的原型对象（prototype属性）的实例。
+```
+B.prototype = Object.create(A.prototype);
+// 等同于
+B.prototype.__proto__ = A.prototype;
 ```
 
 
@@ -3490,6 +3860,8 @@ var p2 = new ColorPoint(2, 3, 'red');
 p2.__proto__ === p1.__proto__ // false
 p2.__proto__.__proto__ === p1.__proto__ // true
 ```
+上面代码中，ColorPoint继承了Point，导致前者原型的原型是后者的原型。
+
 
 因此，通过子类实例的`__proto__.__proto__`属性，可以修改父类实例的行为。
 ```
@@ -3499,6 +3871,7 @@ p2.__proto__.__proto__.printName = function () {
 
 p1.printName() // "Ha"
 ```
+上面代码在ColorPoint的实例p2上向Point类添加方法，结果影响到了Point的实例p1。
 
 ## 原生构造函数的继承
 ```
@@ -3513,6 +3886,8 @@ p1.printName() // "Ha"
     Object()
 ```
 ES6 可以自定义原生数据结构（比如Array、String等）的子类，这是 ES5 无法做到的。
+
+ES5 是先新建子类的实例对象this，再将父类的属性添加到子类上，由于父类的内部属性无法获取，导致无法继承原生的构造函数。比如，Array构造函数有一个内部属性`[[DefineOwnProperty]]`，用来定义新属性时，更新length属性，这个内部属性无法在子类获取，导致子类的length属性行为不正常。
 
 ES6 允许继承原生构造函数定义子类，因为 ES6 是先新建父类的实例对象this，然后再用子类的构造函数修饰this，使得父类的所有行为都可以继承.
 ```
@@ -3594,6 +3969,7 @@ myerror.stack
 //     ...
 ```
 
+继承Object的子类，有一个行为差异。
 
 ## Mixin模式的实现
 Mixin 指的是多个对象合成一个新的对象，新对象具有各个组成成员的接口。
@@ -3641,7 +4017,48 @@ class DistributedEdit extends mix(Loggable, Serializable) {
 }
 ```
 
-# 
+# Module
+CommonJS 和 AMD 模块，都只能在运行时确定这些东西。比如，CommonJS 模块就是对象，输入时必须查找对象属性。
+这种加载称为“运行时加载”，因为只有运行时才能得到这个对象，导致完全没办法在编译时做“静态优化”。
+
+ES6 模块的设计思想是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。
+ES6 模块不是对象，而是通过export命令显式指定输出的代码，再通过import命令输入。
+这种加载称为“编译时加载”或者静态加载，即 ES6 可以在编译时就完成模块加载，效率要比 CommonJS 模块的加载方式高。当然，这也导致了没法引用 ES6 模块本身，因为它不是对象。
+
+由于 ES6 模块是编译时加载，使得静态分析成为可能。有了它，就能进一步拓宽 JavaScript 的语法，比如引入宏（macro）和类型检验（type system）这些只能靠静态分析实现的功能。
+
+除了静态加载带来的各种好处，ES6 模块还有以下好处。
+- 不再需要UMD模块格式了，将来服务器和浏览器都会支持 ES6 模块格式。目前，通过各种工具库，其实已经做到了这一点。
+- 将来浏览器的新 API 就能用模块格式提供，不再必须做成全局变量或者navigator对象的属性。
+- 不再需要对象作为命名空间（比如Math对象），未来这些功能可以通过模块提供。
+
+## 严格模式
+ES6 的模块自动采用严格模式，不管你有没有在模块头部加上"use strict";。
+
+其中，尤其需要注意this的限制。ES6 模块之中，顶层的this指向undefined，即不应该在顶层代码使用this。
+
+## export 命令
+一个模块就是一个独立的文件。该文件内部的所有变量，外部无法获取。如果你希望外部能够读取模块内部的某个变量，就必须使用export关键字输出该变量。
+
+通常情况下，export输出的变量就是本来的名字，但是可以使用as关键字重命名。
+```
+function v1() { ... }
+function v2() { ... }
+
+export {
+  v1 as streamV1,
+  v2 as streamV2,
+  v2 as streamLatestVersion
+};
+```
+
+export语句输出的接口，与其对应的值是动态绑定关系，即通过该接口，可以取到模块内部实时的值。
+这一点与 CommonJS 规范完全不同。CommonJS 模块输出的是值的缓存，不存在动态更新。
+
+export命令可以出现在模块的任何位置，只要处于模块顶层就可以。但如果处于块级作用域内，就会报错。这是因为处于条件代码块之中，就没法做静态优化了，违背了 ES6 模块的设计初衷。
+
+
+
 
 
 
