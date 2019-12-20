@@ -4106,8 +4106,202 @@ console.log('圆周长：' + circle.circumference(14));
 ```
 
 
+## export default
+本质上，export default就是输出一个叫做default的变量或方法，然后系统允许你为它取任意名字。所以，下面的写法是有效的。
+```
+// modules.js
+function add(x, y) {
+  return x * y;
+}
+export {add as default};
+// 等同于
+// export default add;
+
+// app.js
+import { default as foo } from 'modules';
+// 等同于
+// import foo from 'modules';
+```
+
+正是因为export default命令其实只是输出一个叫做default的变量，所以它后面不能跟变量声明语句。
+```
+// 正确
+export var a = 1;
+
+// 正确
+var a = 1;
+export default a;
+
+// 错误
+export default var a = 1;
+```
+
+同样地，因为export default命令的本质是将后面的值，赋给default变量，所以可以直接将一个值写在export default之后。
+```
+// 正确
+export default 42;
+
+// 报错
+export 42;
+```
 
 
+## export 与 import 的复合写法
+如果在一个模块之中，先输入后输出同一个模块，import语句可以与export语句写在一起。
+```
+export { foo, bar } from 'my_module';
+
+// 可以简单理解为
+import { foo, bar } from 'my_module';
+export { foo, bar };
+```
+
+模块的接口改名和整体输出，也可以采用这种写法。
+```
+// 接口改名
+export { foo as myFoo } from 'my_module';
+
+// 整体输出
+export * from 'my_module';
+```
+
+默认接口的写法如下。
+```
+export { default } from 'foo';
+
+//同样地，默认接口也可以改名为具名接口。
+export { default as es6 } from './someModule';
+```
+
+具名接口改为默认接口的写法如下。
+```
+export { es6 as default } from './someModule';
+
+// 等同于
+import { es6 } from './someModule';
+export default es6;
+```
+
+下面三种import语句，没有对应的复合写法。
+```
+import * as someIdentifier from "someModule";
+import someIdentifier from "someModule";
+import someIdentifier, { namedIdentifier } from "someModule";
+
+//为了做到形式的对称，现在有提案，提出补上这三种复合写法。
+export * as someIdentifier from "someModule";
+export someIdentifier from "someModule";
+export someIdentifier, { namedIdentifier } from "someModule";
+```
+
+## import()
+有一个提案，建议引入import()函数，完成动态加载。
+
+import()返回一个 Promise 对象。
+```
+const main = document.querySelector('main');
+
+import(`./section-modules/${someVariable}.js`)
+  .then(module => {
+    module.loadPageInto(main);
+  })
+  .catch(err => {
+    main.textContent = err.message;
+  });
+```
+import()函数可以用在任何地方，不仅仅是模块，非模块的脚本也可以使用。它是运行时执行，也就是说，什么时候运行到这一句，就会加载指定的模块。另外，import()函数与所加载的模块没有静态连接关系，这点也是与import语句不相同。import()类似于 Node 的require方法，区别主要是前者是异步加载，后者是同步加载。
+
+（1）按需加载。
+import()可以在需要的时候，再加载某个模块。
+（2）条件加载
+import()可以放在if代码块，根据不同的情况，加载不同的模块。
+（3）动态的模块路径
+import()允许模块路径动态生成。
+
+import()加载模块成功以后，这个模块会作为一个对象，当作then方法的参数。因此，可以使用对象解构赋值的语法，获取输出接口。
+```
+import('./myModule.js')
+.then(({export1, export2}) => {
+  // ...·
+});
+```
+上面代码中，export1和export2都是myModule.js的输出接口，可以解构获得。
+
+如果模块有default输出接口，可以用参数直接获得。
+```
+import('./myModule.js')
+.then(myModule => {
+  console.log(myModule.default);
+});
+
+//上面的代码也可以使用具名输入的形式。
+import('./myModule.js')
+.then(({default: theDefault}) => {
+  console.log(theDefault);
+});
+```
+
+如果想同时加载多个模块，可以采用下面的写法。
+```
+Promise.all([
+  import('./module1.js'),
+  import('./module2.js'),
+  import('./module3.js'),
+])
+.then(([module1, module2, module3]) => {
+   ···
+});
+```
+
+import()也可以用在 async 函数之中。
+```
+async function main() {
+  const myModule = await import('./myModule.js');
+  const {export1, export2} = await import('./myModule.js');
+  const [module1, module2, module3] =
+    await Promise.all([
+      import('./module1.js'),
+      import('./module2.js'),
+      import('./module3.js'),
+    ]);
+}
+main();
+```
+
+## Module 的加载实现
+默认情况下，浏览器是同步加载 JavaScript 脚本，即渲染引擎遇到`<script>`标签就会停下来，等到执行完脚本，再继续向下渲染。如果是外部脚本，还必须加入脚本下载的时间。
+
+如果脚本体积很大，下载和执行的时间就会很长，因此造成浏览器堵塞，用户会感觉到浏览器“卡死”了，没有任何响应。这显然是很不好的体验，所以浏览器允许脚本异步加载，下面就是两种异步加载的语法。
+```
+<script src="path/to/myModule.js" defer></script>
+<script src="path/to/myModule.js" async></script>
+```
+上面代码中，`<script>`标签打开defer或async属性，脚本就会异步加载。渲染引擎遇到这一行命令，就会开始下载外部脚本，但不会等它下载和执行，而是直接执行后面的命令。
+
+defer与async的区别是：
+defer要等到整个页面在内存中正常渲染结束（DOM 结构完全生成，以及其他脚本执行完成），才会执行；
+async一旦下载完，渲染引擎就会中断渲染，执行这个脚本以后，再继续渲染。
+一句话，defer是“渲染完再执行”，async是“下载完就执行”。
+另外，如果有多个defer脚本，会按照它们在页面出现的顺序加载，而多个async脚本是不能保证加载顺序的。
+
+浏览器加载 ES6 模块，也使用`<script>`标签，但是要加入`type="module"`属性。
+`<script type="module" src="./foo.js"></script>`
+
+对于外部的模块脚本（上例是foo.js），有几点需要注意。
+- 代码是在模块作用域之中运行，而不是在全局作用域运行。模块内部的顶层变量，外部不可见。
+- 模块脚本自动采用严格模式，不管有没有声明use strict。
+- 模块之中，可以使用import命令加载其他模块（.js后缀不可省略，需要提供绝对 URL 或相对 URL），也可以使用export命令输出对外接口。
+- 模块之中，顶层的this关键字返回undefined，而不是指向window。也就是说，在模块顶层使用this关键字，是无意义的。
+- 同一个模块如果加载多次，将只执行一次。
+
+```
+import utils from 'https://example.com/js/utils.js';
+
+const x = 1;
+
+console.log(x === window.x); //false
+console.log(this === undefined); // true
+```
 
 
 
