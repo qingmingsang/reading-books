@@ -4303,10 +4303,153 @@ console.log(x === window.x); //false
 console.log(this === undefined); // true
 ```
 
+## ES6 模块与 CommonJS 模块的差异
+它们有两个重大差异。
+- CommonJS 模块输出的是一个值的拷贝，ES6 模块输出的是值的引用。
+- CommonJS 模块是运行时加载，ES6 模块是编译时输出接口。
+
+第二个差异是因为 CommonJS 加载的是一个对象（即module.exports属性），该对象只有在脚本运行完才会生成。而 ES6 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成。
+
+CommonJS 模块输出的是值的拷贝，也就是说，一旦输出一个值，模块内部的变化就影响不到这个值。
+
+ES6 模块的运行机制与 CommonJS 不一样。JS 引擎对脚本静态分析的时候，遇到模块加载命令import，就会生成一个只读引用。等到脚本真正执行时，再根据这个只读引用，到被加载的那个模块里面去取值。换句话说，ES6 的import有点像 Unix 系统的“符号连接”，原始值变了，import加载的值也会跟着变。因此，ES6 模块是动态引用，并且不会缓存值，模块里面的变量绑定其所在的模块。
+
+export通过接口，输出的是同一个值。不同的脚本加载这个接口，得到的都是同样的实例。
+
+## nodejs 加载
+`.mjs`文件总是以 ES6 模块加载，`.cjs`文件总是以 CommonJS 模块加载，`.js`文件的加载取决于`package.json`里面type字段的设置。
+
+ES6 模块与 CommonJS 模块尽量不要混用。require命令不能加载.mjs文件，会报错，只有import命令才可以加载.mjs文件。反过来，.mjs文件里面也不能使用require命令，必须使用import。
+
+## main 字段
+package.json文件有两个字段可以指定模块的入口文件：main和exports。比较简单的模块，可以只使用main字段，指定模块加载的入口文件。
+```
+// ./node_modules/es-module-package/package.json
+{
+  "type": "module",
+  "main": "./src/index.js"
+}
+
+// ./my-app.mjs
+
+import { something } from 'es-module-package';
+// 实际加载的是 ./node_modules/es-module-package/src/index.js
+```
+
+## exports 字段
+exports字段的优先级高于main字段。它有多种用法。
+（1）子目录别名
+package.json文件的exports字段可以指定脚本或子目录的别名。
+```
+// ./node_modules/es-module-package/package.json
+{
+  "exports": {
+    "./submodule": "./src/submodule.js"
+  }
+}
+```
+上面的代码指定src/submodule.js别名为submodule，然后就可以从别名加载这个文件。
+```
+import submodule from 'es-module-package/submodule';
+// 加载 ./node_modules/es-module-package/src/submodule.js
+```
+
+下面是子目录别名的例子。
+```
+// ./node_modules/es-module-package/package.json
+{
+  "exports": {
+    "./features/": "./src/features/"
+  }
+}
+
+import feature from 'es-module-package/features/x.js';
+// 加载 ./node_modules/es-module-package/src/features/x.js
+```
+如果没有指定别名，就不能用“模块+脚本名”这种形式加载脚本。
 
 
+（2）main 的别名
+
+exports字段的别名如果是`.`，就代表模块的主入口，优先级高于main字段，并且可以直接简写成exports字段的值。
+```
+{
+  "exports": {
+    ".": "./main.js"
+  }
+}
+
+// 等同于
+{
+  "exports": "./main.js"
+}
+```
+由于exports字段只有支持 ES6 的 Node.js 才认识，所以可以用来兼容旧版本的 Node.js。
+```
+{
+  "main": "./main-legacy.cjs",
+  "exports": {
+    ".": "./main-modern.cjs"
+  }
+}
+```
+上面代码中，老版本的 Node.js （不支持 ES6 模块）的入口文件是main-legacy.cjs，新版本的 Node.js 的入口文件是main-modern.cjs。
+
+（3）条件加载
+
+利用.这个别名，可以为 ES6 模块和 CommonJS 指定不同的入口。目前，这个功能需要在 Node.js 运行的时候，打开`--experimental-conditional-exports`标志。
+```
+{
+  "type": "module",
+  "exports": {
+    ".": {
+      "require": "./main.cjs",
+      "default": "./main.js"
+    }
+  }
+}
+```
+上面代码中，别名.的require条件指定require()命令的入口文件（即 CommonJS 的入口），default条件指定其他情况的入口（即 ES6 的入口）。
+
+## ES6 模块加载 CommonJS 模块
+目前，一个模块同时支持 ES6 和 CommonJS 两种格式的常见方法是，package.json文件的main字段指定 CommonJS 入口，给 Node.js 使用；module字段指定 ES6 模块入口，给打包工具使用，因为 Node.js 不认识module字段。
+
+## CommonJS 模块加载 ES6 模块
+CommonJS 的require命令不能加载 ES6 模块，会报错，只能使用import()这个方法加载。
+```
+(async () => {
+  await import('./my-app.mjs');
+})();
+```
+
+## Node.js 的内置模块
+Node.js 的内置模块可以整体加载，也可以加载指定的输出项。
+
+## 加载路径
+ES6 模块的加载路径必须给出脚本的完整路径，不能省略脚本的后缀名。import命令和package.json文件的main字段如果省略脚本的后缀名，会报错。
+
+目前，Node.js 的import命令只支持加载本地模块（file:协议）和data:协议，不支持加载远程模块。另外，脚本路径只支持相对路径，不支持绝对路径（即以/或//开头的路径）。
+
+最后，Node 的import命令是异步加载，这一点与浏览器的处理方法相同。
 
 
+## 内部变量
+ES6 模块应该是通用的，同一个模块不用修改，就可以用在浏览器环境和服务器环境。为了达到这个目标，Node 规定 ES6 模块之中不能使用 CommonJS 模块的特有的一些内部变量。
 
+首先，就是this关键字。ES6 模块之中，顶层的this指向undefined；CommonJS 模块的顶层this指向当前模块，这是两者的一个重大差异。
+
+其次，以下这些顶层变量在 ES6 模块之中都是不存在的。
+```
+arguments
+require
+module
+exports
+__filename
+__dirname
+```
+
+##  循环加载
+“循环加载”（circular dependency）指的是，a脚本的执行依赖b脚本，而b脚本的执行又依赖a脚本。
+对于 JavaScript 语言来说，目前最常见的两种模块格式 CommonJS 和 ES6，处理“循环加载”的方法是不一样的，返回的结果也不一样。
 
 
