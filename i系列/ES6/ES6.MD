@@ -4452,4 +4452,198 @@ __dirname
 “循环加载”（circular dependency）指的是，a脚本的执行依赖b脚本，而b脚本的执行又依赖a脚本。
 对于 JavaScript 语言来说，目前最常见的两种模块格式 CommonJS 和 ES6，处理“循环加载”的方法是不一样的，返回的结果也不一样。
 
+## CommonJS 模块的循环加载
+CommonJS 模块的重要特性是加载时执行，即脚本代码在require的时候，就会全部执行。一旦出现某个模块被"循环加载"，就只输出已经执行的部分，还未执行的部分不会输出。
 
+CommonJS 输入的是被输出值的拷贝，不是引用。
+
+另外，由于 CommonJS 模块遇到循环加载时，返回的是当前已经执行的部分的值，而不是代码全部执行后的值，两者可能会有差异。所以，输入变量的时候，必须非常小心。
+```
+var a = require('a'); // 安全的写法
+var foo = require('a').foo; // 危险的写法
+
+exports.good = function (arg) {
+  return a.foo('good', arg); // 使用的是 a.foo 的最新值
+};
+
+exports.bad = function (arg) {
+  return foo('bad', arg); // 使用的是一个部分加载时的值
+};
+```
+
+## ES6 模块的循环加载
+ES6 处理“循环加载”与 CommonJS 有本质的不同。ES6 模块是动态引用，如果使用import从一个模块加载变量（即import foo from 'foo'），那些变量不会被缓存，而是成为一个指向被加载模块的引用，需要开发者自己保证，真正取值的时候能够取到值。
+
+
+# 编程风格
+
+## 块级作用域
+let 取代 var
+
+var命令存在变量提升效用，let命令没有这个问题。
+
+在let和const之间，建议优先使用const，尤其是在全局环境，不应该设置变量，只应设置常量。
+
+## 字符串
+静态字符串一律使用单引号或反引号，不使用双引号。动态字符串使用反引号。
+
+## 解构赋值
+使用数组成员对变量赋值时，优先使用解构赋值。
+```
+const arr = [1, 2, 3, 4];
+
+// bad
+const first = arr[0];
+const second = arr[1];
+
+// good
+const [first, second] = arr;
+```
+
+函数的参数如果是对象的成员，优先使用解构赋值。
+```
+// bad
+function getFullName(user) {
+  const firstName = user.firstName;
+  const lastName = user.lastName;
+}
+
+// good
+function getFullName(obj) {
+  const { firstName, lastName } = obj;
+}
+
+// best
+function getFullName({ firstName, lastName }) {
+}
+```
+
+如果函数返回多个值，优先使用对象的解构赋值，而不是数组的解构赋值。这样便于以后添加返回值，以及更改返回值的顺序。
+```
+// bad
+function processInput(input) {
+  return [left, right, top, bottom];
+}
+
+// good
+function processInput(input) {
+  return { left, right, top, bottom };
+}
+
+const { left, right } = processInput(input);
+```
+
+## 对象
+单行定义的对象，最后一个成员不以逗号结尾。多行定义的对象，最后一个成员以逗号结尾。
+
+## 数组
+使用扩展运算符（...）拷贝数组。
+```
+// bad
+const len = items.length;
+const itemsCopy = [];
+let i;
+
+for (i = 0; i < len; i++) {
+  itemsCopy[i] = items[i];
+}
+
+// good
+const itemsCopy = [...items];
+```
+
+使用 Array.from 方法，将类似数组的对象转为数组。
+```
+const foo = document.querySelectorAll('.foo');
+const nodes = Array.from(foo);
+```
+
+## 函数
+立即执行函数可以写成箭头函数的形式。
+
+那些使用匿名函数当作参数的场合，尽量用箭头函数代替。因为这样更简洁，而且绑定了 this。
+
+箭头函数取代`Function.prototype.bind`，不应再用 `self/_this/that `绑定 this。
+
+不要在函数体内使用 arguments 变量，使用 rest 运算符（...）代替。因为 rest 运算符显式表明你想要获取参数，而且 arguments 是一个类似数组的对象，而 rest 运算符可以提供一个真正的数组。
+```
+// bad
+function concatenateAll() {
+  const args = Array.prototype.slice.call(arguments);
+  return args.join('');
+}
+
+// good
+function concatenateAll(...args) {
+  return args.join('');
+}
+```
+
+使用默认值语法设置函数参数的默认值。
+```
+// bad
+function handleThings(opts) {
+  opts = opts || {};
+}
+
+// good
+function handleThings(opts = {}) {
+  // ...
+}
+```
+
+## Map 结构
+注意区分 Object 和 Map，只有模拟现实世界的实体对象时，才使用 Object。如果只是需要`key: value`的数据结构，使用 Map 结构。因为 Map 有内建的遍历机制.比Object更快.
+
+## Class
+总是用 Class，取代需要 prototype 的操作。因为 Class 的写法更简洁，更易于理解。
+
+## 模块
+首先，Module 语法是 JavaScript 模块的标准写法，坚持使用这种写法。
+使用import取代require。
+使用export取代module.exports。
+
+如果模块默认输出一个函数，函数名的首字母应该小写。
+如果模块默认输出一个对象，对象名的首字母应该大写。
+
+# 异步遍历器
+`for...of`循环用于遍历同步的 Iterator 接口。新引入的`for await...of`循环，则是用于遍历异步的 Iterator 接口。
+
+
+# ArrayBuffer
+ArrayBuffer对象、TypedArray视图和DataView视图是 JavaScript 操作二进制数据的一个接口。这些对象早就存在，属于独立的规格（2011 年 2 月发布），ES6 将它们纳入了 ECMAScript 规格，并且增加了新的方法。它们都是以数组的语法处理二进制数据，所以统称为二进制数组。
+
+这个接口的原始设计目的，与 WebGL 项目有关。所谓 WebGL，就是指浏览器与显卡之间的通信接口，为了满足 JavaScript 与显卡之间大量的、实时的数据交换，它们之间的数据通信必须是二进制的，而不能是传统的文本格式。文本格式传递一个 32 位整数，两端的 JavaScript 脚本与显卡都要进行格式转化，将非常耗时。这时要是存在一种机制，可以像 C 语言那样，直接操作字节，将 4 个字节的 32 位整数，以二进制形式原封不动地送入显卡，脚本的性能就会大幅提升。
+
+二进制数组就是在这种背景下诞生的。它很像 C 语言的数组，允许开发者以数组下标的形式，直接操作内存，大大增强了 JavaScript 处理二进制数据的能力，使得开发者有可能通过 JavaScript 与操作系统的原生接口进行二进制通信。
+
+二进制数组由三类对象组成。
+
+（1）ArrayBuffer对象：代表内存之中的一段二进制数据，可以通过“视图”进行操作。“视图”部署了数组接口，这意味着，可以用数组的方法操作内存。
+
+（2）TypedArray视图：共包括 9 种类型的视图，比如Uint8Array（无符号 8 位整数）数组视图, Int16Array（16 位整数）数组视图, Float32Array（32 位浮点数）数组视图等等。
+
+（3）DataView视图：可以自定义复合格式的视图，比如第一个字节是 Uint8（无符号 8 位整数）、第二、三个字节是 Int16（16 位整数）、第四个字节开始是 Float32（32 位浮点数）等等，此外还可以自定义字节序。
+
+简单说，ArrayBuffer对象代表原始的二进制数据，TypedArray视图用来读写简单类型的二进制数据，DataView视图用来读写复杂类型的二进制数据。
+
+TypedArray视图支持的数据类型一共有 9 种（DataView视图支持除Uint8C以外的其他 8 种）。
+
+注意，二进制数组并不是真正的数组，而是类似数组的对象。
+
+很多浏览器操作的 API，用到了二进制数组操作二进制数据，下面是其中的几个。
+Canvas
+Fetch API
+File API
+WebSockets
+XMLHttpRequest
+
+传统上，服务器通过 AJAX 操作只能返回文本数据，即responseType属性默认为text。XMLHttpRequest第二版XHR2允许服务器返回二进制数据，这时分成两种情况。如果明确知道返回的二进制数据类型，可以把返回类型（responseType）设为arraybuffer；如果不知道，就设为blob。
+
+网页Canvas元素输出的二进制像素数据，就是 TypedArray 数组。
+
+WebSocket可以通过ArrayBuffer，发送或接收二进制数据。
+
+Fetch API 取回的数据，就是ArrayBuffer对象。
+
+如果知道一个文件的二进制数据类型，也可以将这个文件读取为ArrayBuffer对象。
