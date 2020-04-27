@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        function sum(...args) {
+            const fn = (...arg_fn) => {
+                return sum.apply(this, [...args, ...arg_fn]);
+            }
+            fn.toString = () => {
+                return args.reduce((a, b) => {
+                    return a + b;
+                })
+            }
+            // fn.valueOf = () => {
+            //     return args.reduce((a, b) => {
+            //         return a + b;
+            //     })
+            // }
+            return fn;
+        }
+        let x = sum(1)(2)(3)
+        let y = sum(1, 2, 3)
+        console.log(x)
+        console.log(x.toString())
+        console.log(y)
+        console.log(y.toString())
+
+        function add() {
+            var args = Array.prototype.slice.call(arguments);
+
+            var fn = function () {
+                var arg_fn = Array.prototype.slice.call(arguments);
+                return add.apply(null, args.concat(arg_fn));
+            }
+
+            fn.toString = function () {
+                return args.reduce(function (a, b) {
+                    return a + b;
+                })
+            }
+
+            return fn;
+        }
+        console.log(add(1)(2)(3)(4)(5))
+    </script>
+</body>
+
+</html>

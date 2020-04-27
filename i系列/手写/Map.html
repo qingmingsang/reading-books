@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        //https://blog.csdn.net/qq_42556214/article/details/89928684
+        // function Map() {
+        //     var items = {};
+        //     this.has = function (key) {
+        //         return key in items;
+        //     },
+        //         this.set = function (key, value) {
+        //             items[key] = value;
+        //         },
+        //         this.remove = function (key) {
+        //             if (this.has(key)) {
+        //                 delete items[key];
+        //                 return true;
+        //             }
+        //             return false;
+        //         },
+        //         this.get = function (key) {
+        //             return this.has(key) ? items[key] : undefined;
+        //         },
+        //         this.values = function () {
+        //             var values = [];
+        //             for (var k in items) {
+        //                 if (this.hasOwnProperty(k)) {
+        //                     values.push(items[k]);
+        //                 }
+        //             }
+        //             return values;
+        //         },
+        //         this.clear = function () {
+        //             items = {};
+        //         },
+        //         this.size = function () {
+        //             return Object.Keys(items).length;
+        //         },
+        //         this.getItems = function () {
+        //             return items;
+        //         }
+        // }
+        class QMap {
+            constructor() {
+                this.store = {};
+            }
+            has = (key) => {
+                return key in this.store;
+            }
+            set = (key, value) => {
+                this.store[key] = value;
+            }
+            get = (key) => {
+                return this.store[key];
+            }
+        }
+        let a = new QMap();
+        a.set('kk', '22')
+        console.log(a)
+        console.log(a.get('kk'))
+    </script>
+</body>
+
+</html>

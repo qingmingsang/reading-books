@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let a = [4, 3];
+        let b = [6, 2];
+        let c = a.concat(b);
+
+        function quickSort(arr) {
+            let len = arr.length;
+            if (len == 0) {
+                return [];
+            }
+            let left = [];
+            let right = [];
+            let pivot = arr[0];
+            for (let i = 1; i < len; i++) {
+                if (arr[i] < pivot) {
+                    left.push(arr[i]);
+                } else {
+                    right.push(arr[i]);
+                }
+            }
+            console.log(left, pivot, right)
+            return quickSort(left).concat(pivot, quickSort(right));
+        }
+        c = quickSort(c)
+        console.log(c)
+    </script>
+</body>
+
+</html>

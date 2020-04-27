@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        console.log('oo')
+        const el = document.getElementById('aa');
+        const event = (e) => {
+            console.log('xx', e)
+        };
+        const x = throttle(event, 500);
+        el.addEventListener('click', x)
+
+        function throttle(fn, delay) {
+            let timer = null;
+            return (...args) => {
+                if (!timer) {
+                    timer = setTimeout(() => {
+                        timer = null;
+                        fn.apply(this, args)
+                    }, delay)
+                }
+            }
+        }
+        function throttle2(func, wait) {
+            let previous = 0;
+            return (...args) => {
+                const now = new Date().getTime();
+                if (now - previous > wait) {
+                    func.apply(this, args);
+                    previous = now;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

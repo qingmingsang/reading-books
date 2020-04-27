@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        const TreeNode = function (val) {
+            // 节点的构造函数
+            this.val = val; // 节点的值
+            this.left = null; // 左子树节点
+            this.right = null; // 右子树节点
+        }
+        const BinaryTree = (nodes) => {
+            // 根节点
+            let root = null;
+            // 插入root的子节点
+            const insertNode = (parentNode, childNode) => {
+                // 左子树构造
+                if (childNode.val < parentNode.val) {
+                    // 为空时赋值，否则继续延伸
+                    if (parentNode.left === null) {
+                        parentNode.left = childNode;
+                    } else {
+                        insertNode(parentNode.left, childNode);
+                    }
+                } else { // 右子树的构造 childNode.val > parentNode.val
+                    if (parentNode.right === null) {
+                        parentNode.right = childNode;
+                    } else {
+                        insertNode(parentNode.right, childNode);
+                    }
+                }
+            }
+            // 插入节点的实例方法
+            const insert = (val) => {
+                let thisNode = new TreeNode(val);
+                // 根节点赋值
+                if (root === null) {
+                    root = thisNode;
+                } else {
+                    // 插入子节点
+                    insertNode(root, thisNode);
+                }
+            }
+            nodes.map(val => {
+                insert(val);
+            });
+            return root;
+        }
+        console.log(BinaryTree([1, 3, 5, 2]))
+
+
+
+        function transformTree(list, options = {}) {
+            const {
+                keyField = 'id',
+                childField = 'children',
+                parentField = 'parent'
+            } = options
+
+            const tree = []
+            const record = {}
+
+            for (let i = 0, len = list.length; i < len; i++) {
+                const item = list[i]
+                const id = item[keyField]
+
+                if (!id) {
+                    continue
+                }
+
+                if (record[id]) {
+                    item[childField] = record[id]
+                } else {
+                    item[childField] = record[id] = []
+                }
+
+                if (item[parentField]) {
+                    const parentId = item[parentField]
+
+                    if (!record[parentId]) {
+                        record[parentId] = []
+                    }
+
+                    record[parentId].push(item)
+                } else {
+                    tree.push(item)
+                }
+            }
+
+            return tree
+        }
+
+
+        let jsonData = [
+            { id: 1, parentId: 0, name: "一级菜单A" },
+            { id: 2, parentId: 0, name: "一级菜单B" },
+            { id: 3, parentId: 0, name: "一级菜单C" },
+            { id: 4, parentId: 1, name: "二级菜单A-A" },
+            { id: 5, parentId: 1, name: "二级菜单A-B" },
+            { id: 6, parentId: 2, name: "二级菜单B-A" },
+            { id: 7, parentId: 4, name: "三级菜单A-A-A" },
+            { id: 8, parentId: 7, name: "四级菜单A-A-A-A" },
+            { id: 9, parentId: 8, name: "五级菜单A-A-A-A-A" },
+        ];
+        function formatTree(copyedObj) {
+            return copyedObj.filter(parent => {
+                parent.children = copyedObj.filter(child => {
+                    return parent.id === child.parentId
+                }) || []
+                console.log(parent.parentId)
+                return parent.parentId == 8   //返回顶层，依据实际情况判断这里的返回值
+            })
+        }
+        let x = formatTree(jsonData)
+
+        function GithubUser(username, password) {
+            let _password = password
+            this.username = username
+            GithubUser.prototype.login = function () {
+                console.log(this.username + '要登录Github，密码是' + _password)
+            }
+        }
+
+        function JuejinUser(username, password) {
+            GithubUser.call(this, username, password) // 第二次执行 GithubUser 的构造函数
+            this.articles = 3 // 文章数量
+        }
+
+        JuejinUser.prototype = new GithubUser(); // 第二次执行 GithubUser 的构造函数
+        const xx = new JuejinUser('aaa', 'bbb')
+        xx.login();
+        const juejinUser1 = new JuejinUser('ulivz', 'xxx')
+        juejinUser1.login();
+    </script>
+</body>
+
+</html>

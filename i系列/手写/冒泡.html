@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let a = [4, 3];
+        let b = [6, 2];
+        let c = a.concat(b);
+        // let d = [];
+        // c.map((v) => {
+        //     c.reduce((a, b) => {
+        //         return a > b ? a : b
+        //     })
+        // })
+        //let d = [];
+
+        // for (let i = 0; i < c.length; i++) {
+        //     for (let j = 0; j < c.length - 1 - i; j++) {
+        //         if (c[j] > c[j + 1]) {
+        //             [c[j], c[j + 1]] = [c[j + 1], c[j]];
+        //         }
+        //     }
+        // }
+        let len = c.length;
+        while (len--) {
+            for (let j = 0; j < len; j++) {
+                if (c[j] > c[j + 1]) {
+                    [c[j], c[j + 1]] = [c[j + 1], c[j]];
+                }
+            }
+        }
+        console.log(c)
+    </script>
+</body>
+
+</html>

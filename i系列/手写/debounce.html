@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        console.log('oo')
+        const el = document.getElementById('aa');
+        const event = (e) => {
+            console.log('xx', e)
+        };
+        const x = debounce(event, 1000);
+        el.addEventListener('click', x)
+
+        function debounce(fn, delay = 300) {
+            let timer = null;
+            return (...args) => {
+                clearTimeout(timer)
+                timer = setTimeout(() => {
+                    fn.apply(this, args);
+                }, delay)
+            }
+        }
+
+    </script>
+</body>
+
+</html>
