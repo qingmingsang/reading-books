@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>hello</title>
+  <meta name="description" content="">
+  <meta name="keywords" content="">
+  <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 默认使用webkit内核 -->
+  <meta name="renderer" content="webkit">
+  <style>
+    body {
+      margin: 0;
+    }
+
+    .main {
+      width: 600px;
+      height: 800px;
+      margin: 0 auto;
+      background: lightgray;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title {
+      background: lightskyblue;
+      display: flex;
+      padding: 10px 30px 13px 30px;
+      width: 100%;
+      box-sizing: border-box;
+      justify-content: flex-end;
+    }
+
+    .car {
+      width: 100px;
+      height: 40px;
+      background: lightcoral;
+      text-align: center;
+      line-height: 40px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .content {
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      flex-wrap: wrap;
+      margin-left: -5px;
+    }
+
+    .item {
+      height: 198px;
+      margin-left: 10px;
+      margin-bottom: 5px;
+      min-width: 188px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+    }
+
+    .car:hover>.carlist {
+      display: block;
+    }
+
+    .carlist {
+      background: lightyellow;
+      position: absolute;
+      left: 50%;
+      top: 40px;
+      display: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transform: translateX(-50%);
+      padding: 20px;
+      width: 200px;
+      max-height: 200px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class='main'>
+    <div class='title'>
+      <div class='car'>
+        购物车
+        <div class='carlist'></div>
+      </div>
+    </div>
+    <div class='content'>
+    </div>
+  </div>
+  <script>
+
+    const rgb = () => {
+      const r = Math.floor(Math.random() * 256);
+      const g = Math.floor(Math.random() * 256);
+      const b = Math.floor(Math.random() * 256);
+      return `rgb(${r},${g},${b})`;
+    }
+    const createGoods = (sum) => {
+      let map = new Map();
+      for (let i = 0; i < sum; i++) {
+        map.set(i, {
+          id: i,
+          name: `商品${i}`,
+          price: Math.ceil(Math.random(100) * 100),
+          bg: rgb()
+        })
+      }
+      return map;
+    }
+    const updateList = (newValue) => {
+      let fragment = document.createDocumentFragment();
+      const content = document.querySelector('.content');
+      newValue.forEach((v, k) => {
+        let div = document.createElement('div');
+        div.className = `item id_${v.id}`
+        div.style.backgroundColor = v.bg;
+        div.textContent = `${v.name} 价格￥${v.price}`;
+        fragment.appendChild(div);
+      });
+      content.innerHTML = '';
+      content.appendChild(fragment);
+    }
+    const store = {};
+    let listTemp = store.listData;
+    Object.defineProperty(store, 'listData', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return listTemp;
+      },
+      set(newValue) {
+        updateList(newValue);
+        listTemp = newValue;
+      }
+    })
+    store.listData = createGoods(6);
+    const updateCar = (newValue) => {
+      let fragment = document.createDocumentFragment();
+      const content = document.querySelector('.carlist');
+      let sum = 0;
+      newValue.forEach((v, k) => {
+        let div = document.createElement('div');
+        div.textContent = `${v.name} 单价￥${v.price} 数量${v.count}`;
+        fragment.appendChild(div);
+        sum += (v.price * v.count);
+      });
+      content.innerHTML = '';
+      content.appendChild(fragment);
+      content.insertAdjacentHTML('beforeend', `<div>总价：${sum}</div>`)
+    }
+    let carTemp = store.carData;
+    Object.defineProperty(store, 'carData', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return carTemp;
+      },
+      set(newValue) {
+        updateCar(newValue);
+        carTemp = newValue;
+      }
+    })
+    store.carData = new Map();
+    const content = document.querySelector('.content');
+    content.addEventListener('click', (e) => {
+      const el = e.target;
+      const cls = el.className;
+      if (cls.indexOf('item') > -1) {
+        let id = '';
+        cls.replace(/id_(\d+)/g, (m, p) => {
+          id = Number(p);
+        });
+        store.carData.has(id)
+        if (store.carData.has(id)) {
+          const old = store.carData.get(id);
+          old.count += 1;
+        } else {
+          const list = store.listData.get(id);
+          store.carData.set(id, { ...list, count: 1 });
+        }
+        store.carData = store.carData;
+      }
+    })
+  </script>
+</body>
+
+</html>
