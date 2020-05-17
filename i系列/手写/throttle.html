@@ -36,6 +36,18 @@
                 }
             }
         }
+        function throttle(fn, delay) {
+            let timer = null;
+            return (...args) => {
+                if (timer) {
+                    timer = null;
+                    return false;
+                }
+                timer = setTimeout(() => {
+                    fn.applay(this, args)
+                }, delay)
+            }
+        }
         function throttle2(func, wait) {
             let previous = 0;
             return (...args) => {

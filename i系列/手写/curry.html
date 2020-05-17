@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        function sum(...args) {
+            return args.reduce((a, b) => {
+                return a + b;
+            }, 0)
+        }
+        function curry(fn, args = []) {
+            const f = (...nextArgs) => {
+                return curry(fn, [...args, ...nextArgs]);
+            }
+            f.valueOf = () => {
+                return fn.apply(null, args);
+            }
+            return f;
+        }
+        var currySum = curry(sum);
+        console.log(currySum(1, 2, 3)(4)(5).valueOf()); // 输出：15
+
+
+        function sum2(...args) {
+            const f = (...nextArgs) => {
+                return sum2(...[...args, ...nextArgs]);
+            }
+            f.valueOf = () => {
+                return args.reduce((a, b) => a + b);//在valueOf中计算最后结果
+            }
+            return f;
+        }
+
+        console.log(sum2(1, 2, 3)(4)(6).valueOf());//16
+
+    </script>
+</body>
+
+</html>

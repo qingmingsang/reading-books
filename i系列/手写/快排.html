@@ -41,6 +41,26 @@
         }
         c = quickSort(c)
         console.log(c)
+
+        function qp(arr) {
+            console.warn(arr)
+            if (arr.length === 0) {
+                return [];
+            }
+            const p = arr[0];
+            const left = [];
+            const right = [];
+            for (let i = 1; i < arr.length; i++) {
+                if (arr[i] > p) {
+                    right.push(arr[i])
+                } else {
+                    left.push(arr[i])
+                }
+            }
+            console.info(left, p, right)
+            return qp(left).concat(p, qp(right))
+        }
+        console.log(qp(c))
     </script>
 </body>
 

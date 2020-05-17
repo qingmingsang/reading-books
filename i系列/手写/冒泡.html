@@ -44,6 +44,18 @@
             }
         }
         console.log(c)
+        function mp(arr) {
+            const len = arr.length - 1;
+            for (let i = len; i > -1; i--) {
+                for (let j = 0; j < i; j++) {
+                    if (arr[j] > arr[j + 1]) {
+                        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]]
+                    }
+                }
+            }
+            return arr;
+        }
+        console.log(mp(c))
     </script>
 </body>
 

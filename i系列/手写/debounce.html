@@ -34,7 +34,15 @@
                 }, delay)
             }
         }
-
+        function debounce(fn, defer) {
+            let timer = null;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    fn.apply(this, args);
+                }, defer)
+            }
+        }
     </script>
 </body>
 

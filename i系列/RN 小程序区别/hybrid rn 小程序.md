@@ -41,7 +41,7 @@ Native层（Object C/Java层）
 2. 读取JS文件，并利用利用JS脚本引擎执行
 3. 返回一个数组，数组中会描述OC/Java对象，描述对象属性和所需要执行的方法，这样就能让这个对象设置属性，并且调用方法。
 
-1JSCore，即JavaScriptCore，JS引擎的核心部分。
+JSCore，即JavaScriptCore，JS引擎的核心部分。
 iOS使用的是内置的JavaScriptCore，Android使用的是 https://webkit.org 家的jsc.so。
 
 ## 小结

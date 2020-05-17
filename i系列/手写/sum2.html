@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        function sum(...args) {
+            return args.reduce((a, b) => {
+                return a + b;
+            }, 0)
+        }
+        function curry(fn) {
+            let result = 0;
+            let add = (...args) => {
+                result += fn.apply(this, args)
+                return add;
+            }
+            add.toString = () => {
+                return result;
+            }
+            return add;
+        }
+        let y = curry(sum)(1, 2, 3)
+        console.log(y)
+        let x = curry(sum)(1)(2)(3, 4)
+        console.log(x)
+
+    </script>
+</body>
+
+</html>

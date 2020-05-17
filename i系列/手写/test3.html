@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let a = { c: 'c', b: 'b', a: 'c' }
+        console.log(a)
+        for (let k in a) {
+            console.log(k)
+        }
+        let b = {};
+        b.c = 'c';
+        b.b = 'b';
+        b.a = 'a';
+        for (let k in a) {
+            console.log(k)
+        }
+        let c = new Map()
+        c.set('c', 'c')
+        c.set('b', 'b')
+        c.set('a', 'a')
+        console.log(c)
+    </script>
+</body>
+
+</html>
