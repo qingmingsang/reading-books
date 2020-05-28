@@ -40,5 +40,5 @@ TCP 连接会随着时间进行自我「调谐」，起初会限制连接的最�
 HTTP/2 通过让所有数据流共用同一个连接，可以更有效地使用 TCP 连接，让高带宽也能真正的服务于 HTTP 的性能提升。
 
 https://http2.akamai.com/demo
-
+https://www.zhihu.com/question/34074946
 

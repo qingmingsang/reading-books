@@ -16,7 +16,7 @@
 	* 【Grid formatting context】(GFC)
 	* 【Flex formatting context】(FFC)
 
-## BFC
+## BFC(Block formatting context)
 创建一个独立的渲染区域，并规定了 block-level box 如何布局，且与这个区域外部毫不相关
 
 BFC布局规则如下(注意BFC只影响块级盒)：
