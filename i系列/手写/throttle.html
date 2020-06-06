@@ -40,11 +40,11 @@
             let timer = null;
             return (...args) => {
                 if (timer) {
-                    timer = null;
                     return false;
                 }
                 timer = setTimeout(() => {
                     fn.applay(this, args)
+                    timer = null;
                 }, delay)
             }
         }
@@ -55,6 +55,17 @@
                 if (now - previous > wait) {
                     func.apply(this, args);
                     previous = now;
+                }
+            }
+        }
+        function throttle(fn, delay) {
+            let timer = null;
+            return (...args) => {
+                if (!timer) {
+                    timer = setTimeout(() => {
+                        fn.applay(this, args)
+                        timer = null;
+                    }, delay)
                 }
             }
         }

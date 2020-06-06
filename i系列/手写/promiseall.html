@@ -20,11 +20,13 @@
         function all(arr) {
             const len = arr.length - 1;
             let result = [];
+            let count = 0;
             return new Promise((resolve, reject) => {
                 arr.map((v, k) => {
                     v.then((data) => {
                         result[k] = data;
-                        if (k == len) {
+                        count++;
+                        if (count == len) {
                             resolve(result)
                         }
                     }, reject)

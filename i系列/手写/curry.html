@@ -46,6 +46,28 @@
         }
 
         console.log(sum2(1, 2, 3)(4)(6).valueOf());//16
+        console.log('xxx')
+        function curry1(fn, ...args) {
+            console.log('aa', args, fn, fn.length)
+            if (args.length >= fn.length) {
+                return fn.apply(null, args);
+            }
+
+            return (...args2) => curry1(fn, ...args, ...args2);
+        }
+        function add(a, b, c) {
+            return a + b + c;
+        }
+        function add1(...args) {
+            return args.reduce((a, b) => {
+                return a + b;
+            }, 0)
+        }
+        const add = curry1(add1);
+        console.log(add(1, 2, 3));
+        console.log(add(1)(2)(4));
+        console.log(add(1, 2)(5));
+        console.log(add(1)(2, 6));
 
     </script>
 </body>

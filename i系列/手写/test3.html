@@ -17,23 +17,19 @@
 <body>
     <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
     <script>
-        let a = { c: 'c', b: 'b', a: 'c' }
-        console.log(a)
-        for (let k in a) {
-            console.log(k)
+        Function.prototype.myBind = function (context) {
+            const self = this;
+            let args = [...arguments].slice(1);
+            return function () {
+                // 考虑函数柯里化的情况
+                let newArgs = [...arguments];
+                this.apply(context, newArgs.concat(args))
+            }
         }
-        let b = {};
-        b.c = 'c';
-        b.b = 'b';
-        b.a = 'a';
-        for (let k in a) {
-            console.log(k)
+        let a = (...zz) => {
+            console.log(zz)
         }
-        let c = new Map()
-        c.set('c', 'c')
-        c.set('b', 'b')
-        c.set('a', 'a')
-        console.log(c)
+        let z = a.myApply(this, 'uu')
     </script>
 </body>
 

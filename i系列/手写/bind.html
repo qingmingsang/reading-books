@@ -17,16 +17,31 @@
 <body>
     <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
     <script>
+        this.x = 9;    // 在浏览器中，this 指向全局的 "window" 对象
+        var module = {
+            x: 81,
+            getX: function (y) {
+                console.log(this.x, y)
+            }
+        };
+
+        module.getX(); // 81
+
+        var retrieveX = module.getX;
+        retrieveX();
+        // 返回 9 - 因为函数是在全局作用域中调用的
+
         Function.prototype.xbind = function (context, ...args) {
             return (...innerArgs) => {
                 return this.apply(context, [...args, ...innerArgs]);
             };
         };
-        let a = (...zz) => {
-            console.log(zz)
-        }
-        let z = a.xbind(this, 'kk')
-        z('oo')
+
+        // 创建一个新函数，把 'this' 绑定到 module 对象
+        // 新手可能会将全局变量 x 与 module 的属性 x 混淆
+        var boundGetX = retrieveX.xbind(module, 'a', 'b');
+        boundGetX(); // 81
+
     </script>
 </body>
 
