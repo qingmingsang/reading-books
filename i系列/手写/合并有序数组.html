@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let aa = [2, 5, 9];
+        let bb = [5, 7, 11];
+
+        function sort1(a, b) {
+            let result = [];
+            let ai = 0;
+            let bi = 0;
+            while (result.length != (a.length + b.length)) {
+                if (a[ai] > b[bi]) {
+                    result.push(b[bi]);
+                    bi++;
+                } else {
+                    result.push(a[ai]);
+                    ai++;
+                }
+                if (ai === a.length) {
+                    return result.concat(b.slice(bi));
+                }
+                if (bi === b.length) {
+                    return result.concat(a.slice(ai));
+                }
+            }
+            return result;
+        }
+        function sort(a, b) {
+            let result = [...a];
+            let i = a.length - 1;
+            let j = b.length - 1;
+            let l = i + j + 1;
+            while (j > -1) {
+                if (a[i] > b[j]) {
+                    result[l] = a[i--];
+                } else {
+                    result[l] = b[j--];
+                }
+                l--;
+            }
+            return result;
+        }
+        console.log(sort(aa, bb))
+    </script>
+</body>
+
+</html>

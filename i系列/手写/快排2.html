@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let a = [4, 3];
+        let b = [6, 2];
+        let c = a.concat(b);
+
+        function quickSort1(array) {
+            let low = 0;
+            let high = array.length - 1;
+            let tmp = array[low];
+            while (low < high) {
+                while (low < high && array[high] >= tmp) {
+                    --high;
+                }
+                if (low >= high) {
+                    break;
+                } else {
+                    array[low] = array[high];
+                }
+                while (low < high && array[low] <= tmp) {
+                    ++low;
+                }
+                if (low >= high) {
+                    break;
+                } else {
+                    array[high] = array[low];
+                }
+            }
+            array[low] = tmp;
+            return array;
+        }
+        //迭代的参数是数组的上边界low和下边界high，迭代结束的条件是low == high。
+        function quickSort(arr) {
+            let left = 0;
+            let right = arr.length;
+            let stack = [left, right];
+            while (stack.length) {
+                let l = stack.pop();
+                let h = stack.pop();
+                if ((h - l) <= 0) {
+                    continue;
+                }
+                let hv = arr[h];
+                let i = l - 1;
+                for (let j = l; j < h; j++) {
+                    if (arr[j] <= hv) {
+                        i += 1;
+                        [arr[i], arr[j]] = [arr[j], arr[i]]
+                    }
+                }
+                [arr[i + 1], arr[h]] = [arr[h], arr[i + 1]];
+                stack.push(l, i, i + 2, h);
+            }
+            return arr;
+        }
+        console.log(quickSort(c))
+    </script>
+</body>
+
+</html>

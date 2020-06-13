@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        var treeNodes = [
+            {
+                id: 1,
+                name: '1',
+                children: [
+                    {
+                        id: 11,
+                        name: '11',
+                        children: [
+                            {
+                                id: 111,
+                                name: '111',
+                                children: []
+                            },
+                            {
+                                id: 112,
+                                name: '112'
+                            }
+                        ]
+                    },
+                    {
+                        id: 12,
+                        name: '12',
+                        children: []
+                    }
+                ],
+                users: []
+            },
+            {
+                id: 2,
+                name: '2',
+                children: [
+                    {
+                        id: 22,
+                        name: '22',
+                        children: []
+                    }
+                ]
+            }
+        ];
+        function recursion1(o, sum = 0) {
+            let s = sum;
+            o.map((v) => {
+                s += v.id;
+                if (Array.isArray(v.children) && v.children.length > 0) {
+                    s = recursion(v.children, s);
+                }
+            })
+            return s;
+        }
+        //递归
+        function recursion(o) {
+            let s = 0;
+            o.map((v) => {
+                s += v.id;
+                if (Array.isArray(v.children) && v.children.length > 0) {
+                    s += recursion(v.children);
+                }
+            })
+            return s;
+        }
+        //广度遍历 wideIteration
+        function wideIteration(o) {
+            let stack = [];
+            //先将第一层节点放入栈
+            for (let v of o) {
+                stack.push(v);
+            }
+            let sum = 0;
+            let str = '';
+            while (stack.length) {
+                let item = stack.shift();
+                str += `${item.id}->`;
+                sum += item.id;
+                //如果该节点有子节点，继续添加进入栈顶
+                if (Array.isArray(item.children) && item.children.length) {
+                    stack = stack.concat(item.children)
+                }
+            }
+            console.log(str);
+            return sum;
+        }
+        //深度遍历 deepIteration
+        function deepIteration1(o) {
+            let stack = [];
+            const di = (a) => {
+                a.map((v) => {
+                    stack.push(v);
+                    if (Array.isArray(v.children) && v.children.length > 0) {
+                        di(v.children);
+                    }
+                })
+            }
+            di(o);
+            console.log(stack)
+            return stack.reduce((a, b) => {
+                return a + b.id;
+            }, 0)
+        }
+        function deepIteration(o) {
+            let stack = [];
+            //先将第一层节点放入栈
+            for (let v of o) {
+                stack.push(v);
+            }
+            let sum = 0;
+            let str = '';
+            while (stack.length) {
+                let item = stack.shift();
+                str += `${item.id}->`;
+                sum += item.id;
+                //如果该节点有子节点，继续添加进入栈顶
+                if (Array.isArray(item.children) && item.children.length) {
+                    stack = (item.children).concat(stack)
+                }
+            }
+            console.log(str);
+            return sum;
+        }
+        console.log('recursion', recursion(treeNodes))
+        console.log('deepIteration', deepIteration(treeNodes))//271
+        console.log('---------')
+        console.log('wideIteration', wideIteration(treeNodes))//271
+    </script>
+</body>
+
+</html>

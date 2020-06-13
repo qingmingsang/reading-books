@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        var treeNodes =
+        {
+            id: 1,
+            name: '1',
+            children: [
+                {
+                    id: 11,
+                    name: '11',
+                    children: [
+                        {
+                            id: 111,
+                            name: '111',
+                            children: []
+                        },
+                        {
+                            id: 112,
+                            name: '112'
+                        }
+                    ]
+                },
+                {
+                    id: 12,
+                    name: '12',
+                    children: [
+                        {
+                            id: 121,
+                            name: '121',
+                            children: [{
+                                id: 1211,
+                                name: '1211',
+                                children: []
+                            }]
+                        },
+                    ]
+                }
+            ],
+            users: []
+        };
+        function deepIteration(o) {
+            let stack = [];
+            for (let v of o.children) {
+                stack.push(v)
+            }
+            let sum = o.id;
+            let str = '';
+            while (stack.length) {
+                let v = stack.shift();
+                sum += v.id;
+                str += `${v.id}->`;
+                if (Array.isArray(v.children) && v.children.length) {
+                    stack = (v.children).concat(stack)
+                }
+            }
+            console.log(str)
+            return sum;
+        }
+        console.log('deepIteration', deepIteration(treeNodes))//1579
+        // console.log('wideIteration', wideIteration(treeNodes))
+
+    </script>
+</body>
+
+</html>
