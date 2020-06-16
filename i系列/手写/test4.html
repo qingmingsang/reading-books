@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        let a = [1, 2, 3];
+        function interation(arr) {
+            let r = [];
+            const len = arr.length;
+            for (let i = 0; i < len; i++) {
+                const iv = arr[i];
+                let t = [iv];
+                for (let j = 0; j < len; j++) {
+                    const jv = arr[j];
+                    if (iv === jv) {
+                        continue;
+                    }
+                    t.push(jv)
+                }
+                r.push(t);
+                t = [iv];
+                for (let j = len - 1; j > -1; j--) {
+                    const jv = arr[j];
+                    if (iv === jv) {
+                        continue;
+                    }
+                    t.push(jv)
+                }
+                r.push(t)
+            }
+            return r;
+        }
+        console.log(interation(a))
+    </script>
+</body>
+
+</html>
