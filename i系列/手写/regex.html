@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        function camelize(str) {
+            return String(str).replace(/-[^-]/g, (match) => {
+                return match.charAt(1).toUpperCase()
+            })
+        }
+        console.log(camelize('a-b-c'))
+        function hyphenate(str) {
+            return String(str).replace(/[A-Z]/g, function (match) {
+                return '-' + match.toLowerCase();
+            })
+        }
+        console.log(hyphenate('aBC'))
+
+    </script>
+</body>
+
+</html>

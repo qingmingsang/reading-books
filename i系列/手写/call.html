@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        Function.prototype.myCall = function (context, ...args) {
+            // 先判断context是否为空，如果为空则指向window对象
+            context = context || window;
+            context.fn = this;
+            context.fn(...args);
+            delete context.fn;
+        }
+        function greet(a) {
+            var reply = [this.animal, 'typically sleep between', this.sleepDuration].join(' ');
+            console.log(reply, a);
+        }
+
+        var obj = {
+            animal: 'cats', sleepDuration: '12 and 16 hours'
+        };
+
+        greet.myCall(obj, 'a', 'b');
+        // cats typically sleep between 12 and 16 hours
+
+
+    </script>
+</body>
+
+</html>

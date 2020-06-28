@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>hello</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <!-- <link rel="shortcut icon" href="favicon.ico"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 默认使用webkit内核 -->
+    <meta name="renderer" content="webkit">
+    <link href="" rel="stylesheet">
+    <style></style>
+</head>
+
+<body>
+    <div id='aa' style="width: 100px;height: 100px;background:red;"></div>
+    <script>
+        class MyPromise {
+            constructor(fn) {
+                this.value = null
+                this.state = 'pending';
+                this.resolvedCallBacks = [];
+                this.rejectedCallBacks = [];
+                MyPromise.that = this;
+                try {
+                    fn(MyPromise.resolve, MyPromise.reject)
+                } catch (error) {
+                    MyPromise.reject(this.value)
+                }
+            }
+            static resolve(value) {
+                const that = MyPromise.that;
+                that.state = 'resolved';
+                that.value = value;
+                that.resolvedCallBacks.map(cb => (that.value = cb(that.value)))
+            }
+            static reject(value) {
+                const that = MyPromise.that;
+                that.state = 'rejected';
+                that.value = value;
+                that.rejectedCallBacks.map(cb => (that.value = cb(that.value)));
+            }
+            then(f, r) {
+                switch (this.state) {
+                    case 'pending':
+                        this.resolvedCallBacks.push(f)
+                        this.rejectedCallBacks.push(r)
+                        break;
+                    case 'resolved':
+                        this.value = f(this.value)
+                        break;
+                    case 'rejected':
+                        this.value = r(this.value)
+                        break;
+                    default:
+                        break;
+                }
+                return this
+            }
+        }
+        new MyPromise(resolve => {
+            setTimeout(() => {
+                resolve(1);
+            }, 1000);
+        })
+            .then(res1 => {
+                console.log(res1);
+                return 2;
+            })
+            .then(res2 => console.log(res2));
+
+
+        Promise.race = function (promises) {
+            return new Promise((resolve, reject) => {
+                for (let i = 0; i < promises.length; i++) {
+                    promises[i].then(resolve, reject)
+                };
+            })
+        }
+        //all方法(获取所有的promise，都执行then，把结果放到数组，一起返回)
+        Promise.all = function (promises) {
+            let arr = [];
+            let i = 0;
+            function processData(index, data) {
+                arr[index] = data;
+                i++;
+                if (i == promises.length) {
+                    resolve(arr);
+                };
+            };
+            return new Promise((resolve, reject) => {
+                for (let i = 0; i < promises.length; i++) {
+                    promises[i].then(data => {
+                        processData(i, data);
+                    }, reject);
+                };
+            });
+        }
+        function all(arr) {
+            const len = arr.length - 1;
+            let result = [];
+            return new Promise((resolve, reject) => {
+                arr.map((v, k) => {
+                    v.then((data) => {
+                        result[k] = data;
+                        if (k == len) {
+                            resolve(result)
+                        }
+                    }, reject)
+                })
+            })
+        }
+
+        function all(arr) {
+            let result = [];
+            return new Promise((resolve, reject) => {
+                arr.map((v, k) => {
+                    v.then((data) => {
+                        result[k] = data;
+                        if (k === arr.length - 1) {
+                            resolve(result)
+                        }
+                    }, reject)
+                })
+            })
+        }
+        let a = () => {
+            setTimeout(() => {
+                return 1;
+            }, 100)
+        }
+        let b = setTimeout(() => {
+            return 1;
+        }, 100)
+    </script>
+</body>
+
+</html>
