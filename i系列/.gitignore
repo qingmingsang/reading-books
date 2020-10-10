@@ -3,3 +3,4 @@ npm-debug.log
 yarn-error.log
 *.pdf
 knowledge-master
+.DS_Store
